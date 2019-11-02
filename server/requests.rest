@@ -1,0 +1,23 @@
+POST http://localhost:4000/graphql HTTP/1.1
+Content-Type: application/json
+X-Request-Type: GraphQL
+Cookie: jid=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImR3ZEBtaWFsLmNvbSIsImlkIjoiODlmZTJhMTAtM2ZjNC00MTgxLWE2OWItNTU0MDdiMDg2MWJlIiwiaWF0IjoxNTcyNjY2NTgzLCJleHAiOjE1NzMyNzEzODN9.XdwDpklHNYtlOPCJ6o6-1Yr-1h-HM-SG21uqGqqKmpI
+
+query {
+  profile {
+    email
+    id
+    name
+    createdDate
+  }
+}
+
+###
+POST http://localhost:4000/graphql HTTP/1.1
+Content-Type: application/json
+X-Request-Type: GraphQL
+Cookie: jid=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImR3ZEBtaWFsLmNvbSIsImlkIjoiODlmZTJhMTAtM2ZjNC00MTgxLWE2OWItNTU0MDdiMDg2MWJlIiwiaWF0IjoxNTcyNjY2NTgzLCJleHAiOjE1NzMyNzEzODN9.XdwDpklHNYtlOPCJ6o6-1Yr-1h-HM-SG21uqGqqKmpI
+
+mutation {
+  logout
+}

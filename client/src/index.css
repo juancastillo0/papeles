@@ -1,0 +1,76 @@
+:root {
+  --aux-color: rgb(235, 235, 235);
+  --primary-color: white;
+}
+
+html {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
+}
+
+.d-flex {
+  display: flex;
+}
+.row {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+}
+.col {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.f1 {
+  flex: 1;
+}
+.f2 {
+  flex: 1;
+}
+.f3 {
+  flex: 1;
+}
+.f4 {
+  flex: 1;
+}
+.f5 {
+  flex: 1;
+}
+
+.hidden {
+  display: none;
+}
+
+.one-line-text {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.canvas {
+  height: 1000px;
+  width: 1000px;
+}
