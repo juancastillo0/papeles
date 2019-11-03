@@ -7,7 +7,7 @@ type Props = {};
 
 const StyledDiv = styled.div`
   margin: 0.3em;
-  overflow: scroll;
+  overflow: auto;
   touch-action: none;
   border: 1px solid var(--aux-color);
   border-radius: 10px;

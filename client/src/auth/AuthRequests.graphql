@@ -1,0 +1,35 @@
+query Profile {
+  profile {
+    id
+    email
+    name
+  }
+}
+
+mutation Login($email: String!, $password: String!) {
+  login(email: $email, password: $password) {
+    user {
+      email
+      name
+      id
+    }
+    error
+  }
+}
+
+mutation Register($name: String!, $email: String!, $password: String!) {
+  register(name: $name, email: $email, password: $password) {
+    user {
+      email
+      name
+      id
+    }
+    error
+  }
+}
+
+mutation Logout {
+  logout {
+    error
+  }
+}

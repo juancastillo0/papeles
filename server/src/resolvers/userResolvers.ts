@@ -1,3 +1,4 @@
+import { PubSubEngine } from "graphql-subscriptions";
 import {
   Resolver,
   Query,
@@ -7,12 +8,21 @@ import {
   Field,
   registerEnumType,
   Ctx,
-  UseMiddleware
+  UseMiddleware,
+  Subscription,
+  PubSub,
+  InputType,
+  Int,
+  Root,
+  ResolverInterface,
+  FieldResolver
 } from "type-graphql";
 import { hash, compare } from "bcryptjs";
 import { User } from "../entity/User";
-import { RequestContext } from "src";
+import { RequestContext } from "../";
 import { setJWT, isAuth, invalidateJWT } from "../auth";
+import { Paper, PaperPermission } from "../entity/Paper";
+import { GenericError } from "./utils";
 
 enum RegisterResponseError {
   "BAD_EMAIL" = "BAD_EMAIL",
@@ -61,16 +71,50 @@ class LoginResponse {
   error?: LoginResponseError;
 }
 
+enum SignalType {
+  "offer" = "offer",
+  "answer" = "answer",
+  "candidate" = "candidate"
+}
+registerEnumType(SignalType, { name: "SignalType" });
+
+@ObjectType()
+@InputType("CandidateSignalDataInput")
+class CandidateSignalData {
+  @Field()
+  candidate: string;
+  @Field()
+  sdpMid: string;
+  @Field(() => Int)
+  sdpMLineIndex: number;
+}
+
+@ObjectType()
+@InputType("SignalInput")
+class Signal {
+  @Field(() => SignalType)
+  type: SignalType;
+  @Field({ nullable: true })
+  sdp?: string;
+  @Field({ nullable: true })
+  candidate?: CandidateSignalData;
+}
+
 @Resolver()
 export class UserResolver {
-  @Query(() => String)
-  hello() {
-    return "HELLO";
-  }
-
   @Query(() => [User])
   users() {
     return User.find();
+  }
+
+  @Query(() => User, { nullable: true })
+  userById(@Arg("id") id: string): Promise<User | undefined> {
+    return User.findOne({ id });
+  }
+
+  @Query(() => User, { nullable: true })
+  userByEmail(@Arg("email") email: string): Promise<User | undefined> {
+    return User.findOne({ email });
   }
 
   @Query(() => User)
@@ -137,10 +181,70 @@ export class UserResolver {
     }
   }
 
-  @Mutation(() => Boolean)
-  @UseMiddleware(isAuth)
-  async logout(@Ctx() context: RequestContext) {
-    invalidateJWT(context);
-    return true;
+  @Mutation(() => GenericError, { nullable: true })
+  async logout(@Ctx() context: RequestContext): Promise<GenericError | null> {
+    try {
+      await invalidateJWT(context);
+      return null;
+    } catch (e) {
+      return new GenericError("Server Error");
+    }
   }
+
+  /// ################# SIGNALS #################
+
+  @Subscription(() => Signal, {
+    topics: ({ context }: { context: RequestContext }) => {
+      return context.payload ? context.payload.id : "a";
+    }
+  })
+  signals(@Root() signal: Signal): Signal {
+    return signal;
+  }
+
+  @Mutation(() => GenericError, { nullable: true })
+  async sendSignal(
+    @PubSub() pubSub: PubSubEngine,
+    @Arg("signal") signal: Signal
+  ): Promise<GenericError | null> {
+    await pubSub.publish("a", signal);
+    return null;
+  }
+}
+
+@Resolver(() => User)
+export class UserModelResolver implements ResolverInterface<User> {
+  @FieldResolver()
+  async papers(@Root() user: User): Promise<Paper[]> {
+    try {
+      return await Paper.find({ where: { ownerId: user.id } });
+    } catch (e) {
+      console.log(e);
+      throw Error();
+    }
+  }
+
+  @FieldResolver()
+  async permissions(@Root() user: User): Promise<PaperPermission[]> {
+    try {
+      return await PaperPermission.find({ where: { userId: user.id } });
+    } catch (e) {
+      console.log(e);
+      throw Error();
+    }
+  }
+
+  // @Query(() => [Paper])
+  // @UseMiddleware(isAuth)
+  // allPapers(@Ctx() context: RequestContext): Promise<Paper[]> {
+  //   const userId = context.payload!.id;
+  //   return getConnection()
+  //     .getRepository(Paper)
+  //     .createQueryBuilder("p")
+  //     .leftJoinAndSelect(PaperPermission, "pp", 'pp."paperId" = p.id')
+  //     .where('p."ownerId" = :userId', { userId })
+  //     .orWhere('pp."userId" = :userId', { userId })
+  //     .orderBy("p.name")
+  //     .getMany();
+  // }
 }

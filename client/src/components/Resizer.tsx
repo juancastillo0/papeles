@@ -40,7 +40,11 @@ const ResizerDivisionHorizontal = styled.div`
   }
 `;
 
-function resizeHandler(elem: HTMLDivElement | null, vertical: boolean) {
+function resizeHandler(
+  elem: HTMLDivElement | null,
+  vertical: boolean,
+  leftOrTop: boolean
+) {
   if (elem === null) return () => {};
 
   const keys: {
@@ -66,7 +70,9 @@ function resizeHandler(elem: HTMLDivElement | null, vertical: boolean) {
     return pos;
   }
   const onMouseMove = (event: MouseEvent | TouchEvent) => {
-    const newSize = prevSize + getPosition(event) - position;
+    const newSize = leftOrTop
+      ? prevSize - getPosition(event) + position
+      : prevSize + getPosition(event) - position;
     elem.style.flex = `0 1 ${newSize}px`;
     elem.style[keys.size] = `${newSize}px`;
   };
@@ -99,23 +105,25 @@ function resizeHandler(elem: HTMLDivElement | null, vertical: boolean) {
   return onMouseDown;
 }
 
-type types = {
+type Props = {
   showResizer?: boolean;
   vertical?: boolean;
-  [key:string]: any;
+  leftOrTop?: boolean;
+  [key: string]: any;
 };
 
-const Resizer: React.FC<types> = ({
-  showResizer,
-  vertical,
-  children,
-  ...rest
-}) => {
+const Resizer: React.FC<Props> = (
+  { showResizer, vertical, leftOrTop, children, ...rest } = {
+    vertical: false,
+    leftOrTop: false
+  }
+) => {
   const [wrapperRef, setWrapperRef] = useState<HTMLDivElement | null>(null);
 
-  const onMouseDown = useCallback(resizeHandler(wrapperRef, !!vertical), [
-    wrapperRef
-  ]);
+  const onMouseDown = useCallback(
+    resizeHandler(wrapperRef, !!vertical, !!leftOrTop),
+    [wrapperRef]
+  );
 
   let resizerDisplay;
   if (showResizer !== undefined) {
@@ -128,20 +136,35 @@ const Resizer: React.FC<types> = ({
     ? ResizerDivisionHorizontal
     : ResizerDivisionVertical;
 
-  return (
+  const content = (
+    <div
+      className={vertical ? "row " : "col " + (rest.className || "")}
+      {...rest}
+      key="0"
+      ref={(elem: HTMLDivElement) => setWrapperRef(elem)}
+    >
+      {children}
+    </div>
+  );
+
+  const resizer = (
+    <ResizerComponent
+      key="resizer"
+      onMouseDown={onMouseDown}
+      onTouchStart={onMouseDown}
+      style={{ display: resizerDisplay }}
+    />
+  );
+
+  return leftOrTop ? (
     <>
-      <div
-        className={vertical ? "row " : "col " + (rest.className || "")}
-        {...rest}
-        ref={(elem: HTMLDivElement) => setWrapperRef(elem)}
-      >
-        {children}
-      </div>
-      <ResizerComponent
-        onMouseDown={onMouseDown}
-        onTouchStart={onMouseDown}
-        style={{ display: resizerDisplay }}
-      />
+      {resizer}
+      {content}
+    </>
+  ) : (
+    <>
+      {content}
+      {resizer}
     </>
   );
 };

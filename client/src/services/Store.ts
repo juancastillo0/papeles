@@ -3,9 +3,12 @@ import { observable, action, computed } from "mobx";
 import { CanvasModel } from "./CanvasModel";
 import { TOOLS_TYPES } from "./utils-canvas";
 import { getWindowSize, DeviceSizes } from "./utils-resize";
+import { AuthStore } from "../auth/AuthStore";
+import { Signal } from "../generated/graphql";
 
-class Store {
+class Store extends AuthStore {
   constructor() {
+    super();
     this.windowSize = getWindowSize();
     window.onresize = () => {
       this.windowSize = getWindowSize();
@@ -89,6 +92,10 @@ class Store {
     if (canvas !== undefined) {
       canvas.activateTool(toolName);
     }
+  }
+
+  handleSignal(signal: Signal) {
+    console.log(signal);
   }
 }
 

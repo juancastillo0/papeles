@@ -1,0 +1,36 @@
+subscription Signals {
+  signals {
+    type
+    sdp
+    candidate {
+      sdpMid
+      candidate
+      sdpMLineIndex
+    }
+  }
+}
+
+mutation SendSDPSignal($type: SignalType!, $sdp: String!) {
+  sendSignal(signal: { type: $type, sdp: $sdp }) {
+    error
+  }
+}
+
+mutation SendCandidate(
+  $candidate: String!
+  $sdpMid: String!
+  $sdpMLineIndex: Int!
+) {
+  sendSignal(
+    signal: {
+      type: candidate
+      candidate: {
+        candidate: $candidate
+        sdpMid: $sdpMid
+        sdpMLineIndex: $sdpMLineIndex
+      }
+    }
+  ) {
+    error
+  }
+}

@@ -7,10 +7,40 @@ import {
   CreateDateColumn,
   ManyToOne,
   OneToMany,
-  PrimaryColumn
+  PrimaryColumn,
+  JoinColumn
 } from "typeorm";
-import { Field, ObjectType, registerEnumType, Int } from "type-graphql";
+import {
+  Field,
+  ObjectType,
+  registerEnumType,
+  Int,
+  InputType
+} from "type-graphql";
 import { User } from "./User";
+
+@ObjectType()
+export class PaperRecording {
+  constructor({
+    userId,
+    device,
+    lastId
+  }: {
+    userId: string;
+    device: string;
+    lastId: number;
+  }) {
+    this.userId = userId;
+    this.device = device;
+    this.lastId = lastId;
+  }
+  @Field()
+  userId: string;
+  @Field()
+  device: string;
+  @Field(() => Int)
+  lastId: number;
+}
 
 @ObjectType()
 @Entity()
@@ -25,7 +55,11 @@ export class Paper extends BaseEntity {
 
   @Field(() => User)
   @ManyToOne(() => User, user => user.papers)
+  @JoinColumn({ name: "ownerId" })
   owner: User;
+  @Field()
+  @Column()
+  ownerId: string;
 
   @Field(() => [PaperPermission])
   @OneToMany(() => PaperPermission, permission => permission.paper)
@@ -38,9 +72,17 @@ export class Paper extends BaseEntity {
   @Field()
   @CreateDateColumn()
   createdDate: Date;
+
+  @Field(() => [PaperRecording])
+  @Column("jsonb", { default: '[]' })
+  recording: PaperRecording[];
+
+  @Field(() => Int)
+  @Column("integer", { default: "0" })
+  sequenceNumber: number;
 }
 
-enum PaperPermissionType {
+export enum PaperPermissionType {
   "READ" = "READ",
   "WRITE" = "WRITE",
   "ADMIN" = "ADMIN"
@@ -52,12 +94,20 @@ registerEnumType(PaperPermissionType, { name: "PaperPermissionType" });
 @Index(["user", "paper"], { unique: true })
 export class PaperPermission extends BaseEntity {
   @Field(() => User)
-  @ManyToOne(() => User, user => user.permissions, { primary: true })
+  @ManyToOne(() => User, user => user.permissions)
+  @JoinColumn({ name: "userId" })
   user: User;
+  @Field()
+  @PrimaryColumn()
+  userId: string;
 
   @Field(() => Paper)
-  @ManyToOne(() => Paper, paper => paper.permissions, { primary: true })
+  @ManyToOne(() => Paper, paper => paper.permissions)
+  @JoinColumn({ name: "paperId" })
   paper: Paper;
+  @Field()
+  @PrimaryColumn()
+  paperId: string;
 
   @Field(() => PaperPermissionType)
   @Column()
@@ -65,7 +115,8 @@ export class PaperPermission extends BaseEntity {
 }
 
 @ObjectType()
-class PaperPathData {
+@InputType("PaperPathDataInput")
+export class PaperPathData {
   @Field(() => [Int])
   x: number[];
   @Field(() => [Int])
@@ -76,15 +127,23 @@ class PaperPathData {
 
 @ObjectType()
 @Entity()
-@Index(["paper", "device", "user", "id"], { unique: true })
+@Index(["paper", "id", "device", "user"], { unique: true })
 export class PaperPath extends BaseEntity {
   @Field(() => String)
-  @ManyToOne(() => Paper, paper => paper.paths, { primary: true })
+  @ManyToOne(() => Paper, paper => paper.paths)
+  @JoinColumn({ name: "paperId" })
   paper: Paper;
+  @Field()
+  @PrimaryColumn()
+  paperId: string;
 
   @Field(() => User)
-  @ManyToOne(() => User, { primary: true })
+  @ManyToOne(() => User)
+  @JoinColumn({ name: "userId" })
   user: User;
+  @Field()
+  @PrimaryColumn()
+  userId: string;
 
   @Field()
   @PrimaryColumn()
@@ -94,7 +153,11 @@ export class PaperPath extends BaseEntity {
   @PrimaryColumn({ unsigned: true })
   id: number;
 
-  @Field(() => PaperPathData)
-  @Column("jsonb")
-  data: PaperPathData;
+  @Field(() => PaperPathData, { nullable: true })
+  @Column("jsonb", { nullable: true })
+  data: PaperPathData | null;
+
+  @Field(() => Int)
+  @Column("integer")
+  sequenceNumber: number;
 }

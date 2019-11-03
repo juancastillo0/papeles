@@ -25,7 +25,7 @@ export const cursors = {
 };
 
 export function itemBushFromPath(path: paper.Item) {
-  const { x, y, height, width } = path.internalBounds;
+  const { x, y, height, width } = path.internalBounds; 
   const bushItem = {
     minX: x,
     minY: y,

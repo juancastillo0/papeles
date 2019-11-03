@@ -11,10 +11,9 @@ const StyledCanvasMenu = styled.div`
   border-radius: 10px;
   background-color: var(--primary-color);
   z-index: 2;
-  font-size: 10px;
-
+  margin: 0 0.3em;
   button {
-    background-color: var(--primary-color);
+    background-color: var(--primary-color); 
     border: 0;
     margin: 0 2px;
     padding: 2px 5px;
@@ -29,7 +28,7 @@ const StyledCanvasMenu = styled.div`
     :disabled {
       filter: brightness(85%);
       border-radius: 10px;
-    }
+    } 
     :focus {
       outline-color: var(--aux-color);
     }

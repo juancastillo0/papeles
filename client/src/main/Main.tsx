@@ -9,19 +9,21 @@ import { CanvasMenu } from "./CanvasMenu";
 
 const StyledDiv = styled.div`
   height: 100%;
-  max-width: 100%;
+  width: 100%;
 
-  #list-col{
+  margin-top: 0.3em;
+
+  #list-col {
     min-width: 200px;
-    flex: 1;
-  }
-  #canvas-col{
-    min-width: 300px;
     flex: 2;
   }
-  #table-col{
-    min-width: 200px;
-    flex: 1;
+  #canvas-col {
+    min-width: 300px;
+    flex: 6;
+  }
+  #table-col {
+    min-width: 230px;
+    flex: 3;
   }
 `;
 type Props = {};
@@ -32,14 +34,14 @@ export const Main: React.FC<Props> = observer(() => {
       <Resizer id="list-col">
         <CanvasList />
       </Resizer>
-      <Resizer id="canvas-col">
-        <CanvasMenu showAlways={true}/>
-        <CanvasMenu showAlways={false}/>
+      <div className="col" id="canvas-col">
+        <CanvasMenu showAlways={true} />
+        <CanvasMenu showAlways={false} />
         <Canvas />
-      </Resizer>
-      <div className="col" id="table-col">
-        <VariablesTable />
       </div>
+      <Resizer id="table-col" leftOrTop={true}>
+        <VariablesTable />
+      </Resizer>
     </StyledDiv>
   );
 });
