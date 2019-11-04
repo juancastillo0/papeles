@@ -31,7 +31,7 @@ export type RequestContext = {
     })
   );
   app.use(cookieParser());
-  const apolloServer = new ApolloServer({ 
+  const apolloServer = new ApolloServer({
     schema: await buildSchema({
       resolvers: [
         UserResolver,
