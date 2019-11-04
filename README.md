@@ -26,7 +26,7 @@ TypeScript
 **Version 1.0.0**
 
 ## Screenshot
-![screenshot]()
+![screenshot](https://raw.githubusercontent.com/juancastillo0/papeles/master/Thumbnail.png)
 
 ## Authors
 
