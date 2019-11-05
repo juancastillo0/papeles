@@ -6,7 +6,7 @@ import { Response } from "express";
 import { BlackListedJWT } from "./entity/BlackListedJWT";
 import { getConnection } from "typeorm";
 
-const TOKEN_SECRET = process.env.TOKEN_SECRET || "fefessdfc";
+const TOKEN_SECRET = process.env.TOKEN_SECRET ;
 
 export function setJWT(user: User, res: Response) {
   const token = sign({ email: user.email, id: user.id }, TOKEN_SECRET, {
