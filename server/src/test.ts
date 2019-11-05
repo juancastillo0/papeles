@@ -1,6 +1,5 @@
 import {decode, verify,sign } from "jsonwebtoken";
 
-const secret = "dededafsehb";
 const token = sign({sd: "fe"}, secret, {expiresIn: "7d"});
 
 const payload = decode(token);
