@@ -1,27 +1,10 @@
+import { compare, hash } from "bcryptjs";
 import { PubSubEngine } from "graphql-subscriptions";
-import {
-  Resolver,
-  Query,
-  Mutation,
-  Arg,
-  ObjectType,
-  Field,
-  registerEnumType,
-  Ctx,
-  UseMiddleware,
-  Subscription,
-  PubSub,
-  InputType,
-  Int,
-  Root,
-  ResolverInterface,
-  FieldResolver
-} from "type-graphql";
-import { hash, compare } from "bcryptjs";
-import { User } from "../entity/User";
+import { Arg, Ctx, Field, FieldResolver, InputType, Int, Mutation, ObjectType, PubSub, Query, registerEnumType, Resolver, ResolverInterface, Root, Subscription, UseMiddleware } from "type-graphql";
 import { RequestContext } from "../";
-import { setJWT, isAuth, invalidateJWT } from "../auth";
+import { invalidateJWT, isAuth, setJWT } from "../auth";
 import { Paper, PaperPermission } from "../entity/Paper";
+import { User } from "../entity/User";
 import { GenericError } from "./utils";
 
 enum RegisterResponseError {
@@ -130,6 +113,7 @@ export class UserResolver {
   @Query(() => User)
   @UseMiddleware(isAuth)
   profile(@Ctx() context: RequestContext) {
+    console.log("dwd");
     return User.findOne({ id: context.payload!.id });
   }
 

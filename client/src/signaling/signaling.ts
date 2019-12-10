@@ -1,20 +1,6 @@
 import { client } from "..";
-import {
-  SendSdpSignalMutation,
-  SendSdpSignalMutationVariables,
-  SendSdpSignalDocument,
-  SignalType,
-  SendCandidateSignalMutation,
-  SendCandidateSignalMutationVariables,
-  SendCandidateSignalDocument,
-  SignalReceived,
-  PaperPathDeleteInput,
-  PaperPathUpdateInput,
-  PaperPathInput,
-  PaperPathData,
-  PaperPathDataInput
-} from "../generated/graphql";
-import { PaperIndexedDB } from "../services/IndexedDB";
+import { PaperPathBox, SendCandidateSignalDocument, SendCandidateSignalMutation, SendCandidateSignalMutationVariables, SendSdpSignalDocument, SendSdpSignalMutation, SendSdpSignalMutationVariables, SignalReceived, SignalType } from "../generated/graphql";
+import { PaperIndexedDB, PathIdentifier } from "../services/IndexedDB";
 
 type Peer = { id: string; email: string };
 
@@ -28,24 +14,35 @@ class Connection {
   candidates: RTCIceCandidate[] = [];
 }
 
-enum DataChannelMessageType {
+export enum DataChannelMessageType {
   CREATE_PATH = "CREATE_PATH",
   DELETE_PATH = "DELETE_PATH",
   UPDATE_PATH = "UPDATE_PATH",
   CREATE_PAPER = "CREATE_PAPER"
 }
 
+export type PaperPathMessage = PathIdentifier & { box: PaperPathBox };
+export type PaperPathUpdate = PaperPathMessage & { newBox: PaperPathBox };
+
+// export class DataChannelMessage{
+//   constructor(type: DataChannelMessageType, ms :_DataChannelMessage){
+
+//   }
+//   static DeletePath(ms: PaperPathMessage){
+//     return new DataChannelMessage(DataChannelMessageType.CREATE_PATH, ms);
+//   }
+// }
 type DataChannelMessageDelete = {
   type: DataChannelMessageType.DELETE_PATH;
-  path: PaperPathUpdateInput & { paperId: string };
+  path: PaperPathMessage;
 };
-type DataChannelMessageUpdate = {
+export type DataChannelMessageUpdate = {
   type: DataChannelMessageType.UPDATE_PATH;
-  path: PaperPathUpdateInput & { paperId: string };
+  paths: (PaperPathMessage & { newBox: PaperPathBox })[];
 };
-type DataChannelMessageCreate = {
+export type DataChannelMessageCreate = {
   type: DataChannelMessageType.CREATE_PATH;
-  path: PaperPathUpdateInput & { data: string; paperId: string };
+  path: PaperPathMessage & { data: string };
 };
 type DataChannelMessageCreatePaper = {
   type: DataChannelMessageType.CREATE_PAPER;
@@ -126,7 +123,24 @@ export class Signaling {
     }
   }
 
-  createConnection(peerId: string, isInitiator: boolean) {
+  async sendPathMessage(peerId: string, message: DataChannelMessage) {
+    const conn = this.connections[peerId];
+    if (conn && conn.dc) {
+      conn.dc.send(JSON.stringify(message));
+    } else {
+      this.createConnection(peerId, true, () => {
+        this.sendPathMessage(peerId, message);
+      });
+    }
+  }
+
+  createConnection(
+    peerId: string,
+    isInitiator: boolean,
+    callbackOpen?: () => any
+  ) {
+    const _con = this.connections[peerId];
+    if (_con) return _con;
     const pc = new RTCPeerConnection(undefined);
     const conn = new Connection(peerId, pc);
     this.connections[peerId] = conn;
@@ -136,7 +150,7 @@ export class Signaling {
     if (isInitiator) {
       const dataChannel = pc.createDataChannel("data");
       conn.dc = dataChannel;
-      this.onDataChannelCreated(dataChannel, peerId);
+      this.onDataChannelCreated(dataChannel, peerId, callbackOpen);
 
       console.log("Sending offer to peer");
       pc.createOffer(this.setLocalAndSendMessage(pc, peerId), (error: any) => {
@@ -154,12 +168,19 @@ export class Signaling {
     return pc;
   }
 
-  onDataChannelCreated(channel: RTCDataChannel, peerId: string) {
+  onDataChannelCreated(
+    channel: RTCDataChannel,
+    peerId: string,
+    callbackOpen?: () => any
+  ) {
     channel.onerror = e => {
       console.log(`Channel error. ${e.error}`);
     };
     channel.onopen = () => {
       console.log("Channel opened.");
+      if (callbackOpen) {
+        callbackOpen();
+      }
     };
     channel.onclose = () => {
       console.log("Channel closed.");

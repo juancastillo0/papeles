@@ -1,7 +1,7 @@
+import { observer } from "mobx-react-lite";
 import React from "react";
 import styled from "styled-components";
-import { observer } from "mobx-react-lite";
-import { storeContext } from "../services/Store";
+import { useStore } from "../services/Store";
 
 const StyledDiv = styled.div`
   position: fixed;
@@ -19,7 +19,8 @@ const StyledDiv = styled.div`
   }
 `;
 export const Modal: React.FC = observer(() => {
-  const store = React.useContext(storeContext);
+  const store = useStore();
+  const [lastUpdate, setLastUpdate] = React.useState(0);
   const [containerRef, setContainerRef] = React.useState<HTMLDivElement | null>(
     null
   );
@@ -27,7 +28,7 @@ export const Modal: React.FC = observer(() => {
     if (containerRef !== null && store.modal !== null) {
       const listener = (e: MouseEvent | TouchEvent) => {
         console.log("containerRef.contains(e.target as any)");
-        if (!containerRef.contains(e.target as any)) {
+        if (!containerRef.contains(e.target as any) && store.modal !== null) {
           store.setModal(null);
         }
       };
@@ -37,11 +38,11 @@ export const Modal: React.FC = observer(() => {
         }
       };
       window.addEventListener("keyup", listKey);
-      window.addEventListener("click", listener);
+      window.addEventListener("mousedown", listener);
       window.addEventListener("touchstart", listener);
 
       return () => {
-        window.removeEventListener("click", listener);
+        window.removeEventListener("mousedown", listener);
         window.removeEventListener("touchstart", listener);
         window.removeEventListener("keyup", listKey);
       };

@@ -1,10 +1,10 @@
-import { MiddlewareFn } from "type-graphql";
-import { RequestContext } from "./index";
-import { User } from "./entity/User";
-import { sign, verify, decode } from "jsonwebtoken";
 import { Response } from "express";
-import { BlackListedJWT } from "./entity/BlackListedJWT";
+import { decode, sign, verify } from "jsonwebtoken";
+import { MiddlewareFn } from "type-graphql";
 import { getConnection } from "typeorm";
+import { BlackListedJWT } from "./entity/BlackListedJWT";
+import { User } from "./entity/User";
+import { RequestContext } from "./index";
  
 const TOKEN_SECRET = process.env.TOKEN_SECRET || "fefessdfc";
 
@@ -33,6 +33,7 @@ export const isAuth: MiddlewareFn<RequestContext> = async (
   { context },
   next
 ) => {
+  console.log("dwd jwt");
   const token = context.req.cookies.jid;
   if (!token || (await BlackListedJWT.findOne({ token })) !== undefined)
     throw Error("Not authenticated");

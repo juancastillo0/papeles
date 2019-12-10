@@ -6,6 +6,7 @@ import Resizer from "../components/Resizer";
 import { VariablesTable } from "./VariablesTable";
 import styled from "styled-components";
 import { CanvasMenu } from "./CanvasMenu";
+import { useStore } from "../services/Store";
 
 const StyledDiv = styled.div`
   height: 100%;
@@ -18,7 +19,10 @@ const StyledDiv = styled.div`
     flex: 2;
   }
   #canvas-col {
-    min-width: 410px;
+    max-width: 100%;
+    @media (min-width: 550px) {
+      min-width: 400px;
+    }
     flex: 6;
   }
   #table-col {
@@ -29,19 +33,24 @@ const StyledDiv = styled.div`
 type Props = {};
 
 export const Main: React.FC<Props> = observer(() => {
+  const store = useStore();
   return (
     <StyledDiv className="row">
-      <Resizer id="list-col">
-        <CanvasList />
-      </Resizer>
-      <div className="col" id="canvas-col">
+      {store.showCanvasList && (
+        <Resizer id="list-col" showResizer={store.showCanvas}>
+          <CanvasList />
+        </Resizer>
+      )}
+      <div className={"col " + (!store.showCanvas && "hidden")} id="canvas-col">
         <CanvasMenu showAlways={true} />
         <CanvasMenu showAlways={false} />
         <Canvas />
       </div>
-      <Resizer id="table-col" leftOrTop={true}>
-        <VariablesTable />
-      </Resizer>
+      {store.showTable && (
+        <Resizer id="table-col" leftOrTop={true} showResizer={store.showCanvas}>
+          <VariablesTable />
+        </Resizer>
+      )}
     </StyledDiv>
   );
 });

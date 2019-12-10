@@ -1,23 +1,24 @@
 import {
   DEFAULT_STROKE_COLOR,
-  DEFAUTL_PATH_OPTIONS,
+  DEFAULT_PATH_OPTIONS,
   SELECTED_COLOR,
   ExtendedTool,
   RECT_COLOR
 } from "./utils-canvas";
 import { cursors } from "./utils-canvas";
 import { BushItemId, CanvasModel } from "./CanvasModel";
-import { store } from "../services/Store";
-import { PaperPathData } from "../generated/graphql";
+import { PaperPathPoints } from "../generated/graphql";
 
 export function getAllTools({
+  store,
   updatePaths,
   addPath,
   removePath,
   pastePath,
   bush,
   canvas,
-  scope: paper
+  scope: paper,
+  selectPaths
 }: CanvasModel) {
   /** Select tool */
   function getSelectHandlers() {
@@ -52,7 +53,7 @@ export function getAllTools({
       copiedRect.visible = false;
 
       copiedPaths = selectedPaths.map(p => {
-        const newPath = p.path.clone();
+        const newPath = p.path.clone() as paper.PathItem;
         newPath.visible = false;
         return { ...p, path: newPath };
       });
@@ -254,10 +255,11 @@ export function getAllTools({
                 return p;
               });
           }
-          if (selectedPaths.length == 0) {
+          if (selectedPaths.length === 0) {
             rect.remove();
             rect = new paper.Path.Rectangle(from, from);
           } else {
+            selectPaths(selectedPaths);
             document.addEventListener("copy", handleCopy);
             document.addEventListener("cut", handleCut);
           }
@@ -348,11 +350,11 @@ export function getAllTools({
   /** Drawing tool */
   function getDrawHandlers() {
     let path: paper.Path;
-    let pathSave: PaperPathData;
+    let pathPoints: PaperPathPoints;
     function onMouseDown(event: paper.ToolEvent) {
-      path = new paper.Path(DEFAUTL_PATH_OPTIONS);
+      path = new paper.Path(DEFAULT_PATH_OPTIONS);
       path.add(event.point);
-      pathSave = {
+      pathPoints = {
         t: [new Date().getTime()],
         x: [event.point.x],
         y: [event.point.y]
@@ -361,14 +363,14 @@ export function getAllTools({
     }
     function onMouseDrag(event: paper.ToolEvent) {
       path.add(event.point);
-      pathSave["t"].push(new Date().getTime());
-      pathSave["x"].push(event.point.x);
-      pathSave["y"].push(event.point.y);
+      pathPoints["t"].push(new Date().getTime());
+      pathPoints["x"].push(event.point.x);
+      pathPoints["y"].push(event.point.y);
     }
     function onMouseUp(event: paper.ToolEvent) {
       if (path.length > 3) {
         path.simplify(1.5);
-        addPath(path, pathSave);
+        addPath(path, pathPoints);
       } else {
         path.remove();
         store.showMenu((event as any).event);

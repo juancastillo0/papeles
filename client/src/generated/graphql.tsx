@@ -16,15 +16,24 @@ export type Scalars = {
 export type CandidateSignalData = {
    __typename?: 'CandidateSignalData',
   candidate: Scalars['String'],
-  sdpMid?: Maybe<Scalars['String']>,
-  sdpMLineIndex?: Maybe<Scalars['Int']>,
+  sdpMid: Maybe<Scalars['String']>,
+  sdpMLineIndex: Maybe<Scalars['Int']>,
 };
 
 export type CandidateSignalDataInput = {
   candidate: Scalars['String'],
-  sdpMid?: Maybe<Scalars['String']>,
-  sdpMLineIndex?: Maybe<Scalars['Int']>,
+  sdpMid: Maybe<Scalars['String']>,
+  sdpMLineIndex: Maybe<Scalars['Int']>,
 };
+
+export type CreatePaperPathsResponse = CreatePaperPathsResponseData | GenericError;
+
+export type CreatePaperPathsResponseData = {
+   __typename?: 'CreatePaperPathsResponseData',
+  paperPathRecords: Array<PaperPathRecord>,
+};
+
+export type CreatePaperPermissionResponse = PaperPermission | GenericError;
 
 
 export type GenericError = {
@@ -34,8 +43,8 @@ export type GenericError = {
 
 export type LoginResponse = {
    __typename?: 'LoginResponse',
-  user?: Maybe<User>,
-  error?: Maybe<LoginResponseError>,
+  user: Maybe<User>,
+  error: Maybe<LoginResponseError>,
 };
 
 export enum LoginResponseError {
@@ -47,14 +56,14 @@ export type Mutation = {
    __typename?: 'Mutation',
   register: RegisterResponse,
   login: LoginResponse,
-  logout?: Maybe<GenericError>,
-  sendSignal?: Maybe<GenericError>,
-  createPaperPermission?: Maybe<GenericError>,
-  createPaper?: Maybe<Paper>,
-  deletePaper?: Maybe<GenericError>,
-  deletePaperPaths?: Maybe<GenericError>,
-  updatePaperPaths?: Maybe<GenericError>,
-  createPaperPaths?: Maybe<GenericError>,
+  logout: Maybe<GenericError>,
+  sendSignal: Maybe<GenericError>,
+  createPaperPermission: CreatePaperPermissionResponse,
+  createPaper: Maybe<Paper>,
+  deletePaper: Maybe<GenericError>,
+  deletePaperPaths: Maybe<GenericError>,
+  updatePaperPaths: Maybe<GenericError>,
+  createPaperPaths: CreatePaperPathsResponse,
 };
 
 
@@ -85,6 +94,7 @@ export type MutationCreatePaperPermissionArgs = {
 
 
 export type MutationCreatePaperArgs = {
+  createdDate: Scalars['DateTime'],
   name: Scalars['String'],
   id: Scalars['String']
 };
@@ -134,7 +144,8 @@ export type PaperPath = {
   userId: Scalars['String'],
   device: Scalars['String'],
   id: Scalars['Int'],
-  data?: Maybe<PaperPathData>,
+  data: Maybe<Scalars['String']>,
+  points: Maybe<PaperPathPoints>,
   box: PaperPathBox,
   sequenceNumber: Scalars['Int'],
 };
@@ -154,19 +165,6 @@ export type PaperPathBoxInput = {
   maxY: Scalars['Float'],
 };
 
-export type PaperPathData = {
-   __typename?: 'PaperPathData',
-  x: Array<Scalars['Float']>,
-  y: Array<Scalars['Float']>,
-  t: Array<Scalars['Int']>,
-};
-
-export type PaperPathDataInput = {
-  x: Array<Scalars['Float']>,
-  y: Array<Scalars['Float']>,
-  t: Array<Scalars['Int']>,
-};
-
 export type PaperPathDeleteInput = {
   id: Scalars['Int'],
   userId: Scalars['String'],
@@ -175,8 +173,35 @@ export type PaperPathDeleteInput = {
 
 export type PaperPathInput = {
   id: Scalars['Int'],
-  data: PaperPathDataInput,
+  points: Maybe<PaperPathPointsInput>,
+  data: Scalars['String'],
   box: PaperPathBoxInput,
+};
+
+export type PaperPathPoints = {
+   __typename?: 'PaperPathPoints',
+  x: Array<Scalars['Float']>,
+  y: Array<Scalars['Float']>,
+  t: Array<Scalars['Int']>,
+};
+
+export type PaperPathPointsInput = {
+  x: Array<Scalars['Float']>,
+  y: Array<Scalars['Float']>,
+  t: Array<Scalars['Int']>,
+};
+
+export type PaperPathRecord = {
+   __typename?: 'PaperPathRecord',
+  id: Scalars['Int'],
+  userId: Scalars['String'],
+  device: Scalars['String'],
+  sequenceNumber: Scalars['Int'],
+};
+
+export type PaperPathsResponse = {
+   __typename?: 'PaperPathsResponse',
+  paperPathsAns: Array<PaperPath>,
 };
 
 export type PaperPathUpdateInput = {
@@ -190,6 +215,8 @@ export type PaperPermission = {
    __typename?: 'PaperPermission',
   user: User,
   userId: Scalars['String'],
+  userName: Scalars['String'],
+  userEmail: Scalars['String'],
   paper: Paper,
   paperId: Scalars['String'],
   type: PaperPermissionType,
@@ -208,13 +235,19 @@ export type PaperRecording = {
   lastId: Scalars['Int'],
 };
 
+export type PaperSequenceNumberRecord = {
+  sequenceNumber: Scalars['Int'],
+  paperId: Scalars['String'],
+};
+
 export type Query = {
    __typename?: 'Query',
   users: Array<User>,
-  userById?: Maybe<User>,
-  userByEmail?: Maybe<User>,
+  userById: Maybe<User>,
+  userByEmail: Maybe<User>,
   profile: User,
   papers: Array<Paper>,
+  paperPaths: PaperPathsResponse,
 };
 
 
@@ -227,10 +260,20 @@ export type QueryUserByEmailArgs = {
   email: Scalars['String']
 };
 
+
+export type QueryPapersArgs = {
+  localPapers: Maybe<Array<PaperSequenceNumberRecord>>
+};
+
+
+export type QueryPaperPathsArgs = {
+  localPaths: Array<PaperSequenceNumberRecord>
+};
+
 export type RegisterResponse = {
    __typename?: 'RegisterResponse',
-  user?: Maybe<User>,
-  error?: Maybe<RegisterResponseError>,
+  user: Maybe<User>,
+  error: Maybe<RegisterResponseError>,
 };
 
 export enum RegisterResponseError {
@@ -243,14 +286,14 @@ export type SignalReceived = {
    __typename?: 'SignalReceived',
   userId: Scalars['String'],
   type: SignalType,
-  sdp?: Maybe<Scalars['String']>,
-  candidate?: Maybe<CandidateSignalData>,
+  sdp: Maybe<Scalars['String']>,
+  candidate: Maybe<CandidateSignalData>,
 };
 
 export type SignalSent = {
   type: SignalType,
-  sdp?: Maybe<Scalars['String']>,
-  candidate?: Maybe<CandidateSignalDataInput>,
+  sdp: Maybe<Scalars['String']>,
+  candidate: Maybe<CandidateSignalDataInput>,
 };
 
 export enum SignalType {
@@ -342,10 +385,16 @@ export type CreatePaperPathsMutationVariables = {
 
 export type CreatePaperPathsMutation = (
   { __typename?: 'Mutation' }
-  & { createPaperPaths: Maybe<(
+  & { createPaperPaths: (
+    { __typename?: 'CreatePaperPathsResponseData' }
+    & { paperPathRecords: Array<(
+      { __typename?: 'PaperPathRecord' }
+      & Pick<PaperPathRecord, 'id' | 'userId' | 'device' | 'sequenceNumber'>
+    )> }
+  ) | (
     { __typename?: 'GenericError' }
     & Pick<GenericError, 'error'>
-  )> }
+  ) }
 );
 
 export type DeletePaperPathsMutationVariables = {
@@ -378,7 +427,8 @@ export type UpdatePaperPathsMutation = (
 
 export type CreatePaperMutationVariables = {
   name: Scalars['String'],
-  id: Scalars['String']
+  id: Scalars['String'],
+  createdDate: Scalars['DateTime']
 };
 
 
@@ -400,11 +450,8 @@ export type PapersQuery = (
     & Pick<Paper, 'id' | 'name' | 'ownerId' | 'sequenceNumber' | 'createdDate'>
     & { paths: Array<(
       { __typename?: 'PaperPath' }
-      & Pick<PaperPath, 'userId' | 'device' | 'id' | 'sequenceNumber'>
-      & { data: Maybe<(
-        { __typename?: 'PaperPathData' }
-        & Pick<PaperPathData, 'x' | 'y' | 't'>
-      )>, box: (
+      & Pick<PaperPath, 'userId' | 'device' | 'id' | 'data' | 'sequenceNumber'>
+      & { box: (
         { __typename?: 'PaperPathBox' }
         & Pick<PaperPathBox, 'minX' | 'minY' | 'maxX' | 'maxY'>
       ) }
@@ -425,7 +472,7 @@ export type PapersMetaQuery = (
     & Pick<Paper, 'id' | 'name' | 'ownerId' | 'sequenceNumber' | 'createdDate'>
     & { permissions: Array<(
       { __typename?: 'PaperPermission' }
-      & Pick<PaperPermission, 'userId' | 'type'>
+      & Pick<PaperPermission, 'userId' | 'type' | 'userName' | 'userEmail'>
     )> }
   )> }
 );
@@ -452,10 +499,33 @@ export type CreatePaperPermissionMutationVariables = {
 
 export type CreatePaperPermissionMutation = (
   { __typename?: 'Mutation' }
-  & { createPaperPermission: Maybe<(
+  & { createPaperPermission: (
+    { __typename?: 'PaperPermission' }
+    & Pick<PaperPermission, 'userId' | 'userName' | 'userEmail' | 'type'>
+  ) | (
     { __typename?: 'GenericError' }
     & Pick<GenericError, 'error'>
-  )> }
+  ) }
+);
+
+export type PaperPathsQueryVariables = {
+  localPaths: Array<PaperSequenceNumberRecord>
+};
+
+
+export type PaperPathsQuery = (
+  { __typename?: 'Query' }
+  & { paperPaths: (
+    { __typename?: 'PaperPathsResponse' }
+    & { paperPathsAns: Array<(
+      { __typename?: 'PaperPath' }
+      & Pick<PaperPath, 'sequenceNumber' | 'paperId' | 'userId' | 'device' | 'id' | 'data'>
+      & { box: (
+        { __typename?: 'PaperPathBox' }
+        & Pick<PaperPathBox, 'minX' | 'minY' | 'maxX' | 'maxY'>
+      ) }
+    )> }
+  ) }
 );
 
 export type SignalsSubscriptionVariables = {};
@@ -490,8 +560,8 @@ export type SendSdpSignalMutation = (
 
 export type SendCandidateSignalMutationVariables = {
   candidate: Scalars['String'],
-  sdpMid?: Maybe<Scalars['String']>,
-  sdpMLineIndex?: Maybe<Scalars['Int']>,
+  sdpMid: Maybe<Scalars['String']>,
+  sdpMLineIndex: Maybe<Scalars['Int']>,
   peerId: Scalars['String']
 };
 
@@ -650,7 +720,17 @@ export type LogoutMutationOptions = ApolloReactCommon.BaseMutationOptions<Logout
 export const CreatePaperPathsDocument = gql`
     mutation CreatePaperPaths($paths: [PaperPathInput!]!, $device: String!, $paperId: String!) {
   createPaperPaths(paths: $paths, device: $device, paperId: $paperId) {
-    error
+    ... on CreatePaperPathsResponseData {
+      paperPathRecords {
+        id
+        userId
+        device
+        sequenceNumber
+      }
+    }
+    ... on GenericError {
+      error
+    }
   }
 }
     `;
@@ -748,8 +828,8 @@ export type UpdatePaperPathsMutationHookResult = ReturnType<typeof useUpdatePape
 export type UpdatePaperPathsMutationResult = ApolloReactCommon.MutationResult<UpdatePaperPathsMutation>;
 export type UpdatePaperPathsMutationOptions = ApolloReactCommon.BaseMutationOptions<UpdatePaperPathsMutation, UpdatePaperPathsMutationVariables>;
 export const CreatePaperDocument = gql`
-    mutation CreatePaper($name: String!, $id: String!) {
-  createPaper(name: $name, id: $id) {
+    mutation CreatePaper($name: String!, $id: String!, $createdDate: DateTime!) {
+  createPaper(name: $name, id: $id, createdDate: $createdDate) {
     sequenceNumber
     name
     createdDate
@@ -774,6 +854,7 @@ export type CreatePaperMutationFn = ApolloReactCommon.MutationFunction<CreatePap
  *   variables: {
  *      name: // value for 'name'
  *      id: // value for 'id'
+ *      createdDate: // value for 'createdDate'
  *   },
  * });
  */
@@ -793,11 +874,7 @@ export const PapersDocument = gql`
       userId
       device
       id
-      data {
-        x
-        y
-        t
-      }
+      data
       box {
         minX
         minY
@@ -851,6 +928,8 @@ export const PapersMetaDocument = gql`
     permissions {
       userId
       type
+      userName
+      userEmail
     }
   }
 }
@@ -915,7 +994,15 @@ export type DeletePaperMutationOptions = ApolloReactCommon.BaseMutationOptions<D
 export const CreatePaperPermissionDocument = gql`
     mutation CreatePaperPermission($permissionType: PaperPermissionType!, $peerEmail: String!, $paperId: String!) {
   createPaperPermission(permissionType: $permissionType, peerEmail: $peerEmail, paperId: $paperId) {
-    error
+    ... on GenericError {
+      error
+    }
+    ... on PaperPermission {
+      userId
+      userName
+      userEmail
+      type
+    }
   }
 }
     `;
@@ -946,6 +1033,53 @@ export function useCreatePaperPermissionMutation(baseOptions?: ApolloReactHooks.
 export type CreatePaperPermissionMutationHookResult = ReturnType<typeof useCreatePaperPermissionMutation>;
 export type CreatePaperPermissionMutationResult = ApolloReactCommon.MutationResult<CreatePaperPermissionMutation>;
 export type CreatePaperPermissionMutationOptions = ApolloReactCommon.BaseMutationOptions<CreatePaperPermissionMutation, CreatePaperPermissionMutationVariables>;
+export const PaperPathsDocument = gql`
+    query PaperPaths($localPaths: [PaperSequenceNumberRecord!]!) {
+  paperPaths(localPaths: $localPaths) {
+    paperPathsAns {
+      sequenceNumber
+      paperId
+      userId
+      device
+      id
+      data
+      box {
+        minX
+        minY
+        maxX
+        maxY
+      }
+      sequenceNumber
+    }
+  }
+}
+    `;
+
+/**
+ * __usePaperPathsQuery__
+ *
+ * To run a query within a React component, call `usePaperPathsQuery` and pass it any options that fit your needs.
+ * When your component renders, `usePaperPathsQuery` returns an object from Apollo Client that contains loading, error, and data properties 
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePaperPathsQuery({
+ *   variables: {
+ *      localPaths: // value for 'localPaths'
+ *   },
+ * });
+ */
+export function usePaperPathsQuery(baseOptions?: ApolloReactHooks.QueryHookOptions<PaperPathsQuery, PaperPathsQueryVariables>) {
+        return ApolloReactHooks.useQuery<PaperPathsQuery, PaperPathsQueryVariables>(PaperPathsDocument, baseOptions);
+      }
+export function usePaperPathsLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<PaperPathsQuery, PaperPathsQueryVariables>) {
+          return ApolloReactHooks.useLazyQuery<PaperPathsQuery, PaperPathsQueryVariables>(PaperPathsDocument, baseOptions);
+        }
+export type PaperPathsQueryHookResult = ReturnType<typeof usePaperPathsQuery>;
+export type PaperPathsLazyQueryHookResult = ReturnType<typeof usePaperPathsLazyQuery>;
+export type PaperPathsQueryResult = ApolloReactCommon.QueryResult<PaperPathsQuery, PaperPathsQueryVariables>;
 export const SignalsDocument = gql`
     subscription Signals {
   signals {

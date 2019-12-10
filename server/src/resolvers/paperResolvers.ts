@@ -1,24 +1,10 @@
-import {
-  UseMiddleware,
-  Query,
-  Resolver,
-  Ctx,
-  Mutation,
-  Arg,
-  ResolverInterface,
-  FieldResolver,
-  Root
-} from "type-graphql";
-import { isAuth } from "../auth";
-import { User } from "../entity/User";
+import { GraphQLResolveInfo } from "graphql";
+import { Arg, Args, ArgsType, createUnionType, Ctx, Field, FieldResolver, Info, InputType, Int, Mutation, Query, Resolver, ResolverInterface, Root, UseMiddleware } from "type-graphql";
+import { Brackets, getConnection, MoreThan } from "typeorm";
 import { RequestContext } from "../";
-import {
-  Paper,
-  PaperPermissionType,
-  PaperPermission,
-  PaperPath
-} from "../entity/Paper";
-import { getConnection, Brackets } from "typeorm";
+import { isAuth } from "../auth";
+import { Paper, PaperPath, PaperPermission, PaperPermissionType } from "../entity/Paper";
+import { User } from "../entity/User";
 import { GenericError } from "./utils";
 
 export function isOwnerOrAdmin({
@@ -49,13 +35,45 @@ export function isOwnerOrAdmin({
     .getOne();
 }
 
+const CreatePaperPermissionResponse = createUnionType({
+  name: "CreatePaperPermissionResponse",
+  types: () => [PaperPermission, GenericError],
+  resolveType: value => {
+    if ("error" in value) {
+      return GenericError;
+    }
+    if ("userId" in value) {
+      return PaperPermission;
+    }
+    return undefined;
+  }
+});
+
+@InputType()
+export class PaperSequenceNumberRecord {
+  @Field(() => Int)
+  sequenceNumber: number;
+
+  @Field()
+  paperId: string;
+}
+
+@ArgsType()
+export class PaperSequenceNumberRecords {
+  @Field(() => [PaperSequenceNumberRecord], { nullable: true })
+  localPapers?: PaperSequenceNumberRecord[];
+}
+
 @Resolver()
 export class PaperResolver {
   @Query(() => [Paper])
   @UseMiddleware(isAuth)
-  papers(@Ctx() context: RequestContext): Promise<Paper[]> {
+  async papers(
+    @Ctx() context: RequestContext,
+    @Args() _: PaperSequenceNumberRecords
+  ): Promise<Paper[]> {
     const userId = context.payload!.id;
-    return getConnection()
+    const ans = await  getConnection()
       .getRepository(Paper)
       .createQueryBuilder("p")
       .leftJoinAndSelect(PaperPermission, "pp", 'pp."paperId" = p.id')
@@ -63,9 +81,27 @@ export class PaperResolver {
       .orWhere('pp."userId" = :userId', { userId })
       .orderBy("p.name")
       .getMany();
+    console.log(ans);
+    return ans;
+
+    // if (localPapers) {
+    //   const localPapersMap: { [key: string]: PaperSequenceNumberRecord } = {};
+    //   for (const p of localPapers) {
+    //     localPapersMap[p.paperId] = p;
+    //   }
+    //   ans = ans.filter(
+    //     p =>
+    //       !(p.id in localPapersMap) ||
+    //       localPapersMap[p.id].sequenceNumber < p.sequenceNumber
+    //   );
+      
+
+    // }
+
+    // return ans;
   }
 
-  @Mutation(() => GenericError, { nullable: true })
+  @Mutation(() => CreatePaperPermissionResponse)
   @UseMiddleware(isAuth)
   async createPaperPermission(
     @Arg("paperId") paperId: string,
@@ -73,7 +109,7 @@ export class PaperResolver {
     @Arg("permissionType", () => PaperPermissionType)
     permissionType: PaperPermissionType,
     @Ctx() context: RequestContext
-  ): Promise<GenericError | null> {
+  ): Promise<typeof CreatePaperPermissionResponse> {
     const userId = context.payload!.id;
     const paper = await isOwnerOrAdmin({ userId, paperId });
 
@@ -88,10 +124,11 @@ export class PaperResolver {
       const permission = PaperPermission.create({
         paper: paper,
         type: permissionType,
-        user: peer
+        user: peer,
+        userName: peer.name,
+        userEmail: peer.email
       });
-      await permission.save();
-      return null;
+      return await permission.save();
     } catch (e) {
       console.log(e);
     }
@@ -103,10 +140,12 @@ export class PaperResolver {
   async createPaper(
     @Arg("id") id: string,
     @Arg("name") name: string,
+    @Arg("createdDate", () => Date) createdDate: Date,
     @Ctx() context: RequestContext
   ): Promise<Paper | null> {
     const userId = context.payload!.id;
-    const paper = Paper.create({ name, ownerId: userId, id });
+    console.log(id, name, createdDate);
+    const paper = Paper.create({ name, ownerId: userId, id, createdDate });
 
     try {
       await paper.save();
@@ -154,9 +193,26 @@ export class PaperModelResolver implements ResolverInterface<Paper> {
   }
 
   @FieldResolver()
-  async paths(@Root() paper: Paper): Promise<PaperPath[]> {
+  async paths(
+    @Root() paper: Paper,
+    @Info() info: GraphQLResolveInfo
+  ): Promise<PaperPath[]> {
+    let sequenceNumber = -1;
+    console.log(info.variableValues);
+    // const localPapers = info.variableValues[
+    //   "localPapers"
+    // ] as PaperSequenceNumberRecord[];
+    // if (localPapers) {
+    //   const localPaper = localPapers.find(v => v.paperId === paper.id);
+    //   if (localPaper) {
+    //     sequenceNumber = localPaper.sequenceNumber;
+    //   }
+    // }
+
     try {
-      return await PaperPath.find({ where: { paperId: paper.id } });
+      return await PaperPath.find({
+        where: { paperId: paper.id, sequenceNumber: MoreThan(sequenceNumber) }
+      });
     } catch (e) {
       console.log(e);
       throw Error();

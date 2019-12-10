@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import styled from "styled-components";
 
 const ResizerDivisionVertical = styled.div`
@@ -139,7 +139,7 @@ const Resizer: React.FC<Props> = (
       className={vertical ? "row " : "col " + (rest.className || "")}
       {...rest}
       key="0"
-      ref={(elem: HTMLDivElement) => setWrapperRef(elem)}
+      ref={setWrapperRef}
     >
       {children}
     </div>

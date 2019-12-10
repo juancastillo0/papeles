@@ -20,9 +20,16 @@ import {
   faChevronCircleRight,
   faChevronCircleLeft,
   faShareAlt,
-  faSave
+  faSave,
+  faPlus,
+  faPencilAlt,
+  faEraser,
+  faArrowsAlt,
+  faVectorSquare,
+  faCheck,
+  faSearch
 } from "@fortawesome/free-solid-svg-icons";
-import { DeletePaperPathsDocument, DeletePaperPathsMutation } from "./generated/graphql";
+import { ThemeProvider, DefaultTheme } from "styled-components";
 library.add(
   faTrashAlt,
   faDownload,
@@ -31,16 +38,21 @@ library.add(
   faChevronCircleRight,
   faChevronCircleLeft,
   faShareAlt,
-  faSave
+  faSave,
+  faPlus,
+  faPencilAlt,
+  faEraser,
+  faArrowsAlt,
+  faVectorSquare,
+  faCheck,
+  faSearch
 );
 
-// Create an http link:
 const httpLink = new HttpLink({
   uri: "http://localhost:4000/graphql",
   credentials: "include"
 });
 
-// Create a WebSocket link:
 const wsLink = new WebSocketLink({
   uri: `ws://localhost:4000/graphql`,
   options: {
@@ -48,10 +60,7 @@ const wsLink = new WebSocketLink({
   }
 });
 
-// using the ability to split links, you can send data to each link
-// depending on what kind of operation is being sent
 const link = split(
-  // split based on operation type
   ({ query }) => {
     const definition = getMainDefinition(query);
     return (
@@ -65,9 +74,47 @@ const link = split(
 
 export const client = new ApolloClient({ link, cache: new InMemoryCache() });
 
+export const theme: DefaultTheme = {
+  borderRadius: "7px",
+  colors: {
+    auxLight: "rgb(235, 235, 235)",
+    auxLighter: "rgb(250, 250, 250)",
+
+    primary: "#f4f9fc",
+    primaryLight: "#ffffff",
+    primaryDark: "#c1c6c9",
+
+    secondary: "#006064",
+    secondaryLight: "#428e92",
+    secondaryDark: "#00363a"
+  },
+  breakpoint: {
+    xs: "576px",
+    sm: "768px",
+    md: "992px",
+    lg: "1200px"
+  }
+};
+
+function setThemeVars(theme: any, prefix: string = "") {
+  for (let [key, value] of Object.entries(theme)) {
+    if (typeof value === "string") {
+      document.documentElement.style.setProperty(
+        `--${prefix ? prefix + "-" : ""}${key}`,
+        value
+      );
+    } else {
+      setThemeVars(value, prefix ? `${prefix}-${key}` : key);
+    }
+  }
+}
+setThemeVars(theme, "");
+
 ReactDOM.render(
   <ApolloProvider client={client}>
-    <App />
+    <ThemeProvider theme={theme}>
+      <App />
+    </ThemeProvider>
   </ApolloProvider>,
   document.getElementById("root")
 );

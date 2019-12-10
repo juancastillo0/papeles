@@ -1,22 +1,5 @@
-import {
-  Entity,
-  Column,
-  BaseEntity,
-  Index,
-  CreateDateColumn,
-  ManyToOne,
-  OneToMany,
-  PrimaryColumn,
-  JoinColumn
-} from "typeorm";
-import {
-  Field,
-  ObjectType,
-  registerEnumType,
-  Int,
-  InputType,
-  Float
-} from "type-graphql";
+import { Field, Float, InputType, Int, ObjectType, registerEnumType } from "type-graphql";
+import { BaseEntity, Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, OneToMany, PrimaryColumn } from "typeorm";
 import { User } from "./User";
 
 @ObjectType()
@@ -49,7 +32,7 @@ export class Paper extends BaseEntity {
   @Index({ unique: true })
   @PrimaryColumn({ unique: true })
   id: string;
-  
+
   @Field()
   @Column()
   name: string;
@@ -101,6 +84,12 @@ export class PaperPermission extends BaseEntity {
   @Field()
   @PrimaryColumn()
   userId: string;
+  @Field()
+  @Column()
+  userName: string;
+  @Field()
+  @Column()
+  userEmail: string;
 
   @Field(() => Paper)
   @ManyToOne(() => Paper, paper => paper.permissions)
@@ -116,8 +105,8 @@ export class PaperPermission extends BaseEntity {
 }
 
 @ObjectType()
-@InputType("PaperPathDataInput")
-export class PaperPathData {
+@InputType("PaperPathPointsInput")
+export class PaperPathPoints {
   @Field(() => [Float])
   x: number[];
   @Field(() => [Float])
@@ -167,13 +156,13 @@ export class PaperPath extends BaseEntity {
   @PrimaryColumn({ unsigned: true })
   id: number;
 
-  @Field({ nullable: true })
-  @Column({ nullable: true })
+  @Field(() => String, { nullable: true })
+  @Column({ type: "text", nullable: true })
   data: string | null;
 
-  @Field(() => PaperPathData, { nullable: true })
+  @Field(() => PaperPathPoints, { nullable: true })
   @Column("jsonb", { nullable: true })
-  points: PaperPathData | null;
+  points: PaperPathPoints | null;
 
   @Field(() => PaperPathBox)
   @Column("jsonb")
@@ -183,3 +172,41 @@ export class PaperPath extends BaseEntity {
   @Column("integer")
   sequenceNumber: number;
 }
+
+
+// class PaperPathIdentifier {
+//   @Field()
+//   @PrimaryColumn()
+//   paperId: string;
+
+//   @Field()
+//   @PrimaryColumn()
+//   userId: string;
+
+//   @Field()
+//   @PrimaryColumn()
+//   device: string;
+
+//   @Field(() => Int)
+//   @PrimaryColumn({ unsigned: true })
+//   id: number;
+// }
+
+// class PaperPathRelation {
+
+// }
+
+// @ObjectType()
+// @Entity()
+// export class PaperPrediction {
+//   @PrimaryGeneratedColumn()
+//   id:number
+
+//   symbolId: number;
+
+//   @Column("jsonb")
+//   paths: PaperPathIdentifier[];
+
+//   @Column("jsonb")
+//   relations: PaperPathRelation[];
+// }

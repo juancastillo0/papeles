@@ -4,7 +4,17 @@ mutation CreatePaperPaths(
   $paperId: String!
 ) {
   createPaperPaths(paths: $paths, device: $device, paperId: $paperId) {
-    error
+    ... on CreatePaperPathsResponseData {
+      paperPathRecords {
+        id
+        userId
+        device
+        sequenceNumber
+      }
+    }
+    ... on GenericError {
+      error
+    }
   }
 }
 
@@ -20,8 +30,8 @@ mutation UpdatePaperPaths($paths: [PaperPathUpdateInput!]!, $paperId: String!) {
   }
 }
 
-mutation CreatePaper($name: String!, $id: String!) {
-  createPaper(name: $name, id: $id) {
+mutation CreatePaper($name: String!, $id: String!, $createdDate: DateTime!) {
+  createPaper(name: $name, id: $id, createdDate: $createdDate) {
     sequenceNumber
     name
     createdDate
@@ -38,11 +48,7 @@ query Papers {
       userId
       device
       id
-      data {
-        x
-        y
-        t
-      }
+      data
       box {
         minX
         minY
@@ -70,6 +76,8 @@ query PapersMeta {
     permissions {
       userId
       type
+      userName
+      userEmail
     }
   }
 }
@@ -90,6 +98,34 @@ mutation CreatePaperPermission(
     peerEmail: $peerEmail
     paperId: $paperId
   ) {
-    error
+    ... on GenericError {
+      error
+    }
+    ... on PaperPermission {
+      userId
+      userName
+      userEmail
+      type
+    }
+  }
+}
+
+query PaperPaths($localPaths: [PaperSequenceNumberRecord!]!) {
+  paperPaths(localPaths: $localPaths) {
+    paperPathsAns {
+      sequenceNumber
+      paperId
+      userId
+      device
+      id
+      data
+      box {
+        minX
+        minY
+        maxX
+        maxY
+      }
+      sequenceNumber
+    }
   }
 }

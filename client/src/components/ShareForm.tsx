@@ -1,27 +1,28 @@
-import React from "react";
+import { Form, Formik } from "formik";
 import { observer } from "mobx-react-lite";
-import { useField, useFormik, Field, Formik, FieldArray } from "formik";
-import * as yup from "yup";
-import {
-  useCreatePaperPermissionMutation,
-  PaperPermissionType,
-  useCreatePaperMutation
-} from "../generated/graphql";
-import { TextField } from "../auth/TextField";
+import React from "react";
 import styled from "styled-components";
-import { storeContext } from "../services/Store";
+import * as yup from "yup";
+import { TextField } from "../auth/TextField";
+import { PaperPermissionType, useCreatePaperMutation, useCreatePaperPermissionMutation } from "../generated/graphql";
+import { useStore } from "../services/Store";
+import { SelectField } from "./SelectField";
 
 type Props = {};
 
+// VALIDATION SCHEMA
 const schema = yup.object({
   peerEmail: yup
     .string()
     .required("Requerido")
     .email("El correo no es una dirección válida"),
-  permission: yup.string().required("Requerido")
+  permission: yup
+    .string()
+    .required("Requerido")
+    .oneOf(Object.values(PaperPermissionType))
 });
 
-const StyledForm = styled.form`
+const StyledForm = styled(Form)`
   padding: 1em 3em 3em;
   max-width: 450px;
   min-width: 300px;
@@ -65,115 +66,86 @@ const StyledForm = styled.form`
 `;
 
 export const ShareForm: React.FC<Props> = observer(() => {
-  const store = React.useContext(storeContext);
+  const store = useStore();
   const [createPaper] = useCreatePaperMutation();
   const [createPermission] = useCreatePaperPermissionMutation();
   const [error, setError] = React.useState("");
-  const form = useFormik({
-    initialValues: { peerEmail: "", permission: "" },
-    validate: (values) => {
-      setError("");
-      const errors:{
-        peerEmail?: string;
-        permission?: string;
-    } = {}
-      if (!values.peerEmail){
-        errors.peerEmail = "rewuerido"
-      }
-      return errors;
-    },
-    onSubmit: async ({ peerEmail, permission }, h) => {
-      h.setSubmitting(true);
-      if (permission && store.currentCanvas) {
-        if (store.currentCanvas.sequenceNumber === -1) {
-          const ans = await createPaper({
-            variables: { 
-              name: store.currentCanvas.name,
-              id: store.currentCanvas.id
+
+  if (!store.currentCanvas) {
+    store.setModal(null);
+    return <span />;
+  }
+  const canvasName = store.currentCanvas.name;
+
+  return (
+    <Formik
+      initialValues={{ peerEmail: "", permission: "" }}
+      validate={() => {
+        setError("");
+      }}
+      onSubmit={async ({ peerEmail, permission }, h) => {
+        h.setSubmitting(true);
+        if (permission && store.currentCanvas) {
+          if (store.currentCanvas.sequenceNumber === -1) {
+            const ans = await createPaper({
+              variables: {
+                name: store.currentCanvas.name,
+                id: store.currentCanvas.id,
+                createdDate: store.currentCanvas.createdDate.toISOString()
+              }
+            });
+            if (ans.data && ans.data.createPaper) {
+              store.currentCanvas.updateCanvas(ans.data.createPaper);
+            } else {
+              return h.setSubmitting(false);
             }
-          });
-          if (ans.data && ans.data.createPaper) {
-            store.currentCanvas.updateCanvas(ans.data.createPaper);
-          } else {
-            return h.setSubmitting(false);
           }
-        }
-        if (store.currentCanvas.id) {
           const permissionType = permission as PaperPermissionType;
-          const ans = await createPermission({
+          const { data } = await createPermission({
             variables: {
               paperId: store.currentCanvas.id,
               peerEmail: peerEmail.trim().toLowerCase(),
               permissionType
             }
           });
-
-          if (ans.data && ans.data.createPaperPermission) {
-            setError(ans.data.createPaperPermission.error);
-          }else{
-            store.currentCanvas.updateCanvas({permissions: [...store.currentCanvas.permissions, ]});
+          if (data) {
+            if ("error" in data.createPaperPermission) {
+              setError(data.createPaperPermission.error);
+            } else {
+              store.createPermission(data.createPaperPermission);
+            }
+          } else {
+            setError("Server Error");
           }
         }
-      }
-      h.setSubmitting(false);
-    },
-    validationSchema: schema
-  });
+        h.setSubmitting(false);
+      }}
+      validationSchema={schema}
+      children={({ isSubmitting, isValid }) => (
+        <StyledForm>
+          <h2>Crear Permiso</h2>
+          <h3>{canvasName}</h3>
 
-  if (!store.currentCanvas) {
-    store.setModal(null);
-    return <span />;
-  }
+          <TextField name="peerEmail" type="email" label="Correo Electrónico" />
 
-  const emailField = form.getFieldProps("peerEmail");
-  const permField = form.getFieldProps("permission");
-  const emailFieldM = form.getFieldMeta("peerEmail");
-  const permFieldM = form.getFieldMeta("permission");
-  emailField.
-  return (
-    <StyledForm onSubmit={form.handleSubmit}>
-      <Formik initialValues={}>
-        <Form>
-        </Form>
-      </Formik>
-      <h2>Crear Permiso</h2>
-      <h3>{store.currentCanvas.name}</h3>
-      <Field name="peerEmail" as={} />
+          <SelectField
+            name="permission"
+            label="Permiso" 
+            options={Object.values(PaperPermissionType)}
+            placeholder="Selecciona un Permiso"
+          />
 
-      <label htmlFor="peer-email-input">Correo Electrónico</label>
-      <input {...emailField} type="email" id="peer-email-input" />
-      <div className="error">
-        {emailFieldM.touched ? emailFieldM.error : ""}
-      </div>
-
-      <label htmlFor="permission-input">Permiso</label>
-      <select {...permField} id="permission-input">
-        {[
-          PaperPermissionType.Admin,
-          PaperPermissionType.Read,
-          PaperPermissionType.Write
-        ].map(v => {
-          return (
-            <option value={v} key={v}>
-              {v}
-            </option>
-          );
-        })}
-        {form.values.permission === "" && (
-          <option value="">Selecciona el permiso</option>
-        )}
-      </select>
-      <div className="error">{permFieldM.touched ? permFieldM.error : ""}</div>
-
-      <div id="buttons">
-        <button type="button" onClick={() => store.setModal(null)}>
-          Cancelar
-        </button>
-        <button type="submit" disabled={form.isSubmitting}>
-          Crear Permiso
-        </button>
-        <div className="error">{error}</div>
-      </div>
-    </StyledForm>
+          <div id="buttons">
+            <button type="button" onClick={() => store.setModal(null)}>
+              Cancelar
+            </button>
+            <button type="submit" disabled={isSubmitting || !isValid}>
+              Crear Permiso
+            </button>
+          </div>
+          <div className="error">{error}</div>
+        </StyledForm>
+      )}
+    ></Formik>
   );
 });

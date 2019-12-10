@@ -1,82 +1,101 @@
-import React, { useContext } from "react";
 import { observer } from "mobx-react-lite";
-import { Link } from "react-router-dom";
+import React from "react";
+import { Link, useLocation } from "react-router-dom";
 import styled from "styled-components";
-import {
-  useProfileQuery,
-  useLoginMutation,
-  useLogoutMutation
-} from "../generated/graphql";
-import { storeContext } from "../services/Store";
+import { AUTH_PATHS, SIGNUP_PATHS } from "../auth/Auth";
+import { useLogoutMutation, useProfileQuery } from "../generated/graphql";
+import { useStores } from "../services/Store";
 import { SignalingComponent } from "../signaling/SignalingComponent";
+
+const NavItem = styled(Link)<{ active?: boolean }>`
+  display: flex;
+  padding: 0.6em 0.7em;
+  border-bottom: 2px solid
+    ${p => (p.active ? p.theme.colors.secondary : "transparent")};
+  :hover {
+    font-weight: bolder;
+    cursor: pointer;
+  }
+  :focus {
+    font-weight: bolder;
+    outline: none;
+  }
+  color: black;
+  font-size: 1.1em;
+  margin: auto;
+  :visited {
+    color: black;
+  }
+  text-decoration: none;
+
+  @media (max-width: ${p => p.theme.breakpoint.sm}) {
+    padding: 0.5em 0.6em;
+  }
+`;
 
 const StyledDiv = styled.div`
   justify-content: space-between;
-  border-bottom: 1px solid var(--aux-color);
-  background: var(--aux-color);
+  box-shadow: 0 0 4px 1px var(--aux-color);
+  background: var(--secondary-color);
+  z-index: 2;
+  width: 100%;
 
   #right-options {
     display: flex;
     flex-direction: row;
   }
-  .nav-item {
-    padding: 0.5em 0.7em 0.7em;
-  }
-  a {
-    color: black;
+  > ${NavItem}:first-of-type {
+    margin-left: 0;
     font-size: 1.2em;
-    font-weight: bold;
-    :visited {
-      color: black;
+  }
+
+  @media (min-width: ${p => p.theme.breakpoint.sm}) {
+    > ${NavItem}:first-of-type {
+      margin-left: 0.7em;
     }
-    :hover {
-      filter: brightness(90%);
+    #right-options {
+      margin-right: 0.8em;
     }
-    text-decoration: none;
   }
 `;
 type Props = {};
 
-const NavItem: React.FC<{ to: string; [key: string]: any }> = ({
-  to,
-  children,
-  ...rest
-}) => {
-  return (
-    <div className="nav-item">
-      <Link to={to} {...rest}>
-        {children}
-      </Link>
-    </div>
-  );
-};
-
 export const NavBar: React.FC<Props> = observer(() => {
-  const store = useContext(storeContext);
+  const { authStore } = useStores();
   const [logoutFn] = useLogoutMutation();
   const { loading, data, error } = useProfileQuery();
 
+  const location = useLocation();
+  let activePage: "main" | "signup" | "login" = "main";
+  if (SIGNUP_PATHS.includes(location.pathname)) {
+    activePage = "signup";
+  } else if (AUTH_PATHS.includes(location.pathname)) {
+    activePage = "login";
+  }
+  
   React.useEffect(() => {
     if (!loading) {
       if (error || !data) {
-        store.setUser(null);
+        authStore.setUser(null);
       } else {
-        store.setUser(data.profile);
+        authStore.setUser(data.profile);
       }
     }
-  }, [loading, data, error]);
+  }, [authStore, loading, data, error]);
 
   return (
     <StyledDiv className="row">
-      <NavItem to="/">Papeles</NavItem>
+      <NavItem to="/" active={activePage == "main"}>
+        Papeles
+      </NavItem>
       <div id="right-options">
-        {store.user ? (
+        {authStore.user ? (
           <button
             type="button"
             onClick={async () => {
               const res = await logoutFn();
               if (!res.errors) {
-                store.setUser(null);
+                authStore.setUser(null);
               }
             }}
           >
@@ -84,12 +103,16 @@ export const NavBar: React.FC<Props> = observer(() => {
           </button>
         ) : (
           <>
-            <NavItem to="/register">Registrarse</NavItem>
-            <NavItem to="/login">Ingresar</NavItem>
+            <NavItem to="/register" active={activePage == "signup"}>
+              Registrarse
+            </NavItem>
+            <NavItem to="/login" active={activePage == "login"}>
+              Ingresar
+            </NavItem>
           </>
         )}
       </div>
-      {store.user !== null && <SignalingComponent />}
+      {authStore.user !== null && <SignalingComponent />}
     </StyledDiv>
   );
 });

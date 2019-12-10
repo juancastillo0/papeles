@@ -1,20 +1,30 @@
 :root {
   --aux-color: rgb(235, 235, 235);
+  --bg-color: rgb(250, 250, 250);
   --primary-color: white;
+  --secondary-color: #f4f9fc;
 }
 
-html {
+html,
+body,
+#root {
   width: 100%;
   height: 100%;
 }
 
 body {
   margin: 0;
-  width: 100%;
-  height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+  font-size: 16px;
+  /* font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
     "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
+    sans-serif; */
+
+  font-family: "Nunito", sans-serif;
+  font-family: "Libre Franklin", sans-serif;
+
+  font-family: "Source Code Pro", monospace;
+  font-family: "Roboto Mono", monospace;
+
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -22,8 +32,7 @@ body {
 #root {
   display: flex;
   flex-direction: column;
-  width: 100%;
-  height: 100%;
+  background: var(--bg-color);
 }
 
 code {
@@ -54,9 +63,31 @@ code {
   white-space: nowrap;
 }
 
+button {
+  background: var(--colors-primaryLight);
+  font-size: inherit;
+  border: 1px solid var(--colors-auxLight);
+
+  font-family: inherit;
+}
 button:hover {
   cursor: pointer;
   filter: brightness(95%);
+}
+button:focus {
+  border: 1px solid var(--colors-secondary);
+  outline: none;
+}
+input {
+  padding: 0.45em 0.7em;
+  font-size: inherit;
+  border: 1px solid var(--colors-auxLight);
+  border-bottom-width: 2px;
+}
+input:focus {
+  outline: none;
+  border-bottom: 1px solid var(--colors-secondary);
+  border-bottom-width: 2px;
 }
 
 .f1 {
@@ -76,4 +107,13 @@ button:hover {
 }
 .f6 {
   flex: 6;
+}
+div.error {
+  color: #d21b1b;
+  text-align: center;
+  font-size: 0.9em;
+  min-height: 1.9em;
+}
+.mjx-container {
+  margin: 0 !important;
 }

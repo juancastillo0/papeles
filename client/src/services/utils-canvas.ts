@@ -23,7 +23,7 @@ export const cursors = {
   [TOOLS_TYPES.select]: "default"
 };
 
-export function bushItemFromPath(path: paper.Item) {
+export function bushItemFromPath(path: paper.PathItem) {
   const { x, y, height, width } = path.internalBounds;
   const bushItem = {
     minX: x,

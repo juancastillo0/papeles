@@ -1,92 +1,163 @@
+import { NormalizedCacheObject } from "apollo-cache-inmemory";
+import { ApolloClient } from "apollo-client";
+import { action, computed, IReactionDisposer, observable, reaction } from "mobx";
+import { actionAsync, task } from "mobx-utils";
 import React from "react";
-import { observable, action, computed } from "mobx";
-import { CanvasModel } from "./CanvasModel";
-import { TOOLS_TYPES } from "./utils-canvas";
-import { getWindowSize, DeviceSizes } from "./utils-resize";
-import {
-  SignalReceived,
-  PapersQuery,
-  PapersQueryVariables,
-  PapersDocument,
-  Paper,
-  DeletePaperMutation,
-  DeletePaperDocument,
-  DeletePaperMutationVariables
-} from "../generated/graphql";
-import { client } from "..";
-import { Signaling, DataChannelMessage } from "../signaling/signaling";
 import uuid from "uuid";
-import { IndexedDB, createIndexedDB } from "./IndexedDB";
+import { AuthApi } from "../auth/AuthApi";
+import { AuthStore, UserProfile } from "../auth/AuthStore";
+import { CanvasApi } from "../canvas/CanvasApi";
+import { PaperPath, PaperPathBoxInput, SignalReceived } from "../generated/graphql";
+import { DataChannelMessage, DataChannelMessageType, Signaling } from "../signaling/signaling";
+import { Predictor } from "../tensorflow/predict";
+import { BushItemId, CanvasModel, getBoxFromBushItem, SimplePermission } from "./CanvasModel";
+import { getIdFromBushItem } from "./CanvasPredictor";
+import { IndexedDB, PaperIndexedDB, PathIdentifier, PathIndexedDB } from "./IndexedDB";
+import { TOOLS_TYPES } from "./utils-canvas";
+import { DeviceSizes, getWindowSize } from "./utils-resize";
 
-type userProfile = { id: string; name: string; email: string } | null;
+function bushItemToDB(bushItem: BushItemId, paperId: string): PathIndexedDB {
+  return {
+    box: getBoxFromBushItem(bushItem),
+    data: bushItem.path.pathData,
+    device: bushItem.device,
+    paperId,
+    id: bushItem.id,
+    userId: bushItem.userId
+  };
+}
 
-class Store {
+export class Store {
+  constructor(
+    public db: IndexedDB,
+    public client: ApolloClient<NormalizedCacheObject>,
+    papers: PaperIndexedDB[]
+  ) {
+    this.windowSize = this.setWindowSize();
+    window.onresize = this.setWindowSize;
 
-  constructor() {
-    this.windowSize = getWindowSize();
-    window.onresize = () => {
-      this.windowSize = getWindowSize();
-    };
     this.canvasUploadImage = document.createElement("img");
     this.canvasUploadImage.style.display = "none";
     document.body.appendChild(this.canvasUploadImage);
-    // this.initIndexedDB();
+
+    this.authStore = new AuthStore(this, new AuthApi(this.client));
+    this.canvasApi = new CanvasApi(this.client);
+    this.predictor = new Predictor();
+
+    for (const papel of papers) {
+      const canvas = new CanvasModel({ papel, store: this });
+      this.canvasMap.set(canvas.id, canvas);
+    }
+
+    const currentCanvasId = localStorage.getItem("currentCanvasId");
+    if (currentCanvasId && this.canvasMap.has(currentCanvasId)) {
+      this.currentCanvasId = currentCanvasId;
+    } else if (this.canvasMap.size === 0) {
+      this.currentCanvasId = this.createCanvas("Nuevo Papel");
+    } else {
+      this.currentCanvasId = this.canvasMap.keys().next().value;
+    }
+
+    localStorage.setItem("currentCanvasId", this.currentCanvasId);
+    this.reactionDisposers.push(
+      reaction(() => this.currentCanvasId, this.persistData("currentCanvasId"))
+    );
+    this.reactionDisposers.push(
+      reaction(
+        () => this.authStore.user,
+        u => this.onAuthStateChanged(u)
+      )
+    );
   }
 
-  @observable windowSize: { w: number; h: number; device: DeviceSizes };
+  @action.bound setWindowSize() {
+    this.windowSize = getWindowSize();
+    if (this.windowSize.device > 1) {
+      this.showCanvas = true;
+    }
+    if (this.windowSize.device <= 1 && this.showCanvas) {
+      this.showCanvasList = false;
+      this.showTable = false;
+    } else if (
+      this.windowSize.device === 2 &&
+      this.showCanvasList &&
+      this.showTable
+    ) {
+      this.showCanvasList = true;
+      this.showTable = false;
+    }
+    return this.windowSize;
+  }
+
+  reactionDisposers: IReactionDisposer[] = [];
+  persistData(key: string) {
+    return (value: string) => {
+      localStorage.setItem(key, value);
+    };
+  }
+  dispose() {
+    this.reactionDisposers.forEach(disposer => disposer());
+    window.removeEventListener("resize", this.setWindowSize);
+  }
+
+  canvasApi: CanvasApi;
+  authStore: AuthStore;
+  predictor: Predictor;
   canvasUploadImage: HTMLImageElement;
-
-  @observable canvasMap = observable.map<string, CanvasModel>({});
-  @observable currentCanvasName: string | null = null;
-  @observable menuPosition: { x: number; y: number } | null = null;
-  @observable isUsingPen: boolean = false;
-
-  @observable user: userProfile = null;
-  @observable modal: React.ReactNode | null = null;
-
   loadedIndexedDB: boolean = true;
   fetchedPapers: boolean = false;
   signaling: Signaling | null = null;
-  indexedDB: IndexedDB | null = null;
 
-  @action.bound setModal(modal: React.ReactNode | null) {
+  // OBSERVABLES
+
+  @observable resetStore: boolean = false;
+
+  @observable windowSize: { w: number; h: number; device: DeviceSizes };
+
+  @observable canvasMap = observable.map<string, CanvasModel>({});
+  @observable currentCanvasId: string;
+  @observable menuPosition: { x: number; y: number } | null = null;
+  @observable isUsingPen: boolean = false;
+  @observable modal: React.ReactNode | null = null;
+
+  @computed get user() {
+    return this.authStore.user;
+  }
+  @computed get currentCanvas() {
+    return this.canvasMap.get(this.currentCanvasId)!;
+  }
+  @computed get currentTool() {
+    return this.currentCanvas.currentTool;
+  }
+  @computed get isSaving() {
+    return this.currentCanvas.isSaving;
+  }
+
+  // ACTIONS
+
+  @action.bound
+  setModal(modal: React.ReactNode | null) {
     this.modal = modal;
   }
-  @action.bound setUser(user: userProfile) {
-    this.user = user;
-    if (user) {
-      if (this.indexedDB) {
-        this.indexedDB.updateUserId(user.id);
-      }
-      this.fetchPapers();
-      this.signaling = new Signaling(user.id, this.onDataChannelMessage);
-    } else if (this.signaling) {
-      this.signaling.close();
-      this.canvasMap.clear();
-      this.createCanvas("nuevo papel");
-    }
-  }
 
-  @action.bound onDataChannelMessage(
-    peerId: string,
-    message: DataChannelMessage
-  ) {
+  @action.bound
+  onDataChannelMessage(peerId: string, message: DataChannelMessage) {
     switch (message.type) {
       case "CREATE_PAPER": {
         const papel = message.paper;
-        if (this.canvasMap.has(papel.id)) {
-          const canvas = this.canvasMap.get(papel.id)!;
+        const canvas = this.canvasMap.get(papel.id);
+        if (canvas) {
           canvas.updateCanvas(papel);
         } else {
-          const canvas = new CanvasModel({ papel });
+          const canvas = new CanvasModel({ papel, store: this });
           this.canvasMap.set(canvas.id, canvas);
         }
         break;
       }
       case "CREATE_PATH": {
         const path = message.path;
-        if (this.canvasMap.has(path.paperId)) {
-          const canvas = this.canvasMap.get(path.paperId)!;
+        const canvas = this.canvasMap.get(path.paperId);
+        if (canvas) {
           canvas.loadPath(path);
         } else {
           console.log(`ERROR CREATE_PATH ${path}`);
@@ -95,8 +166,8 @@ class Store {
       }
       case "DELETE_PATH": {
         const path = message.path;
-        if (this.canvasMap.has(path.paperId)) {
-          const canvas = this.canvasMap.get(path.paperId)!;
+        const canvas = this.canvasMap.get(path.paperId);
+        if (canvas) {
           canvas.deletePathPeer(path);
         } else {
           console.log(`ERROR DELETE_PATH ${path}`);
@@ -104,99 +175,198 @@ class Store {
         break;
       }
       case "UPDATE_PATH": {
+        const paths = message.paths;
+        const canvas = this.canvasMap.get(paths[0].paperId);
+        if (canvas) {
+          for (const path of paths) {
+            canvas.updatePathPeer(path);
+          }
+        } else {
+          console.log(`ERROR DELETE_PATH ${paths}`);
+        }
         break;
       }
     }
   }
 
-  async loadPaths(paperId: string) {
-    if (this.indexedDB) {
-      return await this.indexedDB.loadPaperPaths(paperId);
-    }
-    return [];
+  // ########################  CONNECTIONS  ##################################
+
+  selectedPaths: PathIdentifier[] = [];
+
+  @action.bound
+  createPath(_path: BushItemId) {
+    const signaling = this.signaling;
+    const path = bushItemToDB(_path, this.currentCanvasId);
+    return Promise.all([
+      this.db.addPaths([path]),
+      ...(signaling
+        ? this.currentCanvas.permissions.map(per => {
+            return signaling.sendPathMessage(per.userId, {
+              type: DataChannelMessageType.CREATE_PATH,
+              path
+            });
+          })
+        : [])
+    ]);
   }
 
-  async initIndexedDB() {
-    this.indexedDB = await createIndexedDB();
-    const papers = await this.indexedDB.fetchPapers();
-    for (const papel of papers) {
-      const canvas = new CanvasModel({ papel });
-      this.canvasMap.set(papel.id, canvas);
-    }
-    this.loadedIndexedDB = true;
-    this.fetchPapers();
+  @action.bound
+  deletePath(_path: BushItemId) {
+    const signaling = this.signaling;
+    const path = bushItemToDB(_path, this.currentCanvasId);
+    return Promise.all([
+      this.db.deletePath(path),
+      ...(signaling
+        ? this.currentCanvas.permissions.map(per => {
+            return signaling.sendPathMessage(per.userId, {
+              type: DataChannelMessageType.DELETE_PATH,
+              path
+            });
+          })
+        : [])
+    ]);
   }
 
-  @action.bound async fetchPapers() {
-    // if (!this.loadedIndexedDB || this.fetchedPapers) return;
+  @action.bound
+  selectPaths(paths: PathIdentifier[]) {
+    this.selectedPaths = paths;
+  }
+
+  @action.bound
+  updatePaths(_paths: (BushItemId & { newBox: PaperPathBoxInput })[]) {
+    const signaling = this.signaling;
+    const paths = _paths.map(p => bushItemToDB(p, this.currentCanvasId));
+    const newPaths = paths.map((p, i) => ({ ...p, newBox: _paths[i].newBox }));
+    return Promise.all([
+      this.db.updatePaths(paths),
+      ...(signaling
+        ? this.currentCanvas.permissions.map(per => {
+            return signaling.sendPathMessage(per.userId, {
+              type: DataChannelMessageType.UPDATE_PATH,
+              paths: newPaths
+            });
+          })
+        : [])
+    ]);
+  }
+
+  // #################################
+
+  @action
+  onAuthStateChanged = async (user: UserProfile) => {
+    if (user) {
+      this.db.updateUserId(user.id);
+      this.signaling = new Signaling(user.id, this.onDataChannelMessage);
+      this.fetchPapers();
+    } else {
+      if (this.signaling) this.signaling.close();
+      this.db.deleteDB();
+      localStorage.clear();
+      this.dispose();
+      this.resetStore = true;
+    }
+  };
+
+  @action
+  fetchPapers = async () => {
     if (this.user !== null) {
-      const ans = await client.query<PapersQuery, PapersQueryVariables>({
-        query: PapersDocument
-      });
-      if (ans.data) {
-        const papers = ans.data.papers;
+      const localPaths: { paperId: string; sequenceNumber: number }[] = [];
+      for (const papel of this.canvasMap.values()) {
+        if (papel.sequenceNumber !== -1) {
+          localPaths.push({
+            paperId: papel.id,
+            sequenceNumber: papel.sequenceNumber
+          });
+        }
+      }
+      const allPapeles = await this.canvasApi.papersMeta({});
+      const allPaths = await this.canvasApi.paperPaths({ localPaths });
+      console.log(allPapeles, allPaths);
+      if (allPaths && allPapeles && allPaths.data) {
+        const mapPaths: {
+          [key: string]: {
+            [key: string]: Omit<PaperPath, "paper" | "user" | "points">;
+          };
+        } = {};
+        for (const path of allPaths.data.paperPaths.paperPathsAns) {
+          if (!(path.paperId in mapPaths)) {
+            mapPaths[path.paperId] = {};
+          }
+          mapPaths[path.paperId][getIdFromBushItem(path)] = path;
+        }
+        const papers = allPapeles.data.papers;
         for (const papel of papers) {
-          const canvas = new CanvasModel({ papel });
-          this.canvasMap.set(papel.id, canvas);
+          const localPaper = this.canvasMap.get(papel.id);
+          if (localPaper) {
+            localPaper.updateCanvas(papel);
+            const paths = mapPaths[papel.id];
+            if (paths) {
+              localPaper.loadNewPaths(paths);
+            }
+          } else {
+            const canvas = new CanvasModel({
+              papel: { ...papel, currentTool: TOOLS_TYPES.draw },
+              store: this
+            });
+            this.canvasMap.set(papel.id, canvas);
+          }
+        }
+
+        const peers = new Set<string>();
+        peers.add(this.user.id);
+
+        for (const canvas of this.canvasMap.values()) {
+          for (const peer of canvas.permissions) {
+            if (!peers.has(peer.userId)) {
+              this.signaling!.createConnection(peer.userId, true);
+              peers.add(peer.userId);
+            }
+          }
         }
       }
     }
-  }
+  };
 
-  @action.bound toggleIsUsingPen() {
+  // CANVAS FUNCTIONS
+
+  @action.bound
+  toggleIsUsingPen() {
     this.isUsingPen = !this.isUsingPen;
     this.canvasMap.forEach(v => v.usePen(this.isUsingPen));
   }
 
-  @computed get currentCanvas() {
-    if (this.currentCanvasName) {
-      return this.canvasMap.get(this.currentCanvasName);
-    }
-    return undefined;
-  }
-  @computed get currentTool() {
-    const canvas = this.currentCanvas;
-    if (canvas) {
-      return canvas.currentTool;
-    }
-    return undefined;
-  }
-  @computed get isSaving() {
-    return this.currentCanvas && this.currentCanvas.isSaving;
-  }
-
-  @action.bound openCanvas(canvasKey: string) {
+  @action.bound
+  openCanvas(canvasKey: string) {
     if (this.canvasMap.has(canvasKey)) {
-      this.currentCanvasName = canvasKey;
-    }
-  }
-  @action.bound deleteCanvas() {
-    if (this.currentCanvas) {
-      if (this.currentCanvas.id) {
-        this._deleteCanvas(this.currentCanvas.id);
-        this.canvasMap.delete(this.currentCanvas.id);
-      } else {
-        this.canvasMap.delete(this.currentCanvas.name);
-      }
-      if (this.canvasMap.size === 0) {
-        this.createCanvas("nuevo papel");
-      } else {
-        this.currentCanvasName = this.canvasMap.keys().next().value;
-      }
+      this.currentCanvasId = canvasKey;
     }
   }
 
-  async _deleteCanvas(paperId: string) {
-    const ans = await client.mutate<
-      DeletePaperMutation,
-      DeletePaperMutationVariables
-    >({
-      mutation: DeletePaperDocument,
-      variables: { paperId }
-    });
+  @action.bound
+  saveCanvas() {
+    if (this.user) {
+      this.currentCanvas.save();
+    }
   }
 
-  @action.bound createCanvas(canvasName: string) {
+  @actionAsync
+  deleteCanvas = async () => {
+    const paperId = this.currentCanvas.id;
+
+    await task(this.db.deletePaper(paperId));
+    this.canvasMap.delete(this.currentCanvas.id);
+
+    if (this.canvasMap.size === 0) {
+      this.createCanvas("Nuevo Papel");
+    } else {
+      this.currentCanvasId = this.canvasMap.keys().next().value;
+    }
+
+    await task(this.canvasApi.deletePaper({ paperId }));
+  };
+
+  @action.bound
+  createCanvas(canvasName: string) {
     let newCanvasName = canvasName;
     let i = 2;
     while (this.canvasMap.has(newCanvasName)) {
@@ -206,15 +376,20 @@ class Store {
     const canvas = new CanvasModel({
       id: uuid.v4(),
       name: newCanvasName,
-      withPen: this.isUsingPen
+      store: this
     });
     this.canvasMap.set(canvas.id, canvas);
-    this.currentCanvasName = newCanvasName;
+    this.currentCanvasId = canvas.id;
+    return canvas.id;
   }
 
-  @observable canShowMenu: boolean = true;
+  // CANVAS MENU
 
-  @action.bound showMenu(event: MouseEvent | TouchEvent) {
+  @observable
+  canShowMenu: boolean = true;
+
+  @action.bound
+  showMenu(event: MouseEvent | TouchEvent) {
     if (!this.canShowMenu) return;
 
     let pageX, pageY;
@@ -229,7 +404,8 @@ class Store {
     this.menuPosition = { x: pageX, y: pageY };
   }
 
-  @action.bound hideMenu() {
+  @action.bound
+  hideMenu() {
     if (this.menuPosition !== null) {
       this.menuPosition = null;
       this.canShowMenu = false;
@@ -238,24 +414,84 @@ class Store {
     }
   }
 
-  @action.bound changeTool(toolName: TOOLS_TYPES) {
-    const canvas = this.currentCanvas;
-    if (canvas !== undefined) {
-      canvas.activateTool(toolName);
+  @action.bound
+  changeTool(toolName: TOOLS_TYPES) {
+    this.currentCanvas.activateTool(toolName);
+  }
+
+  // LAYOUT
+
+  @observable showCanvasList: boolean = true;
+  @observable showCanvas: boolean = true;
+  @observable showTable: boolean = true;
+
+  @action.bound toggleCanvasList() {
+    this.showCanvasList = !this.showCanvasList;
+    if (this.showCanvasList) {
+      if (this.windowSize.device <= 1) {
+        this.showCanvas = false;
+      }
+      if (this.windowSize.device === 2 && this.showTable) {
+        this.showTable = false;
+      }
+    } else {
+      this.showCanvas = true;
+    }
+  }
+  @action.bound toggleTable() {
+    this.showTable = !this.showTable;
+    if (this.showTable) {
+      if (this.windowSize.device <= 1) {
+        this.showCanvas = false;
+      }
+      if (this.windowSize.device === 2 && this.showCanvasList) {
+        this.showCanvasList = false;
+      }
+    } else {
+      this.showCanvas = true;
     }
   }
 
-  @action.bound saveCanvas() {
-    if (this.user && this.currentCanvas) {
-      this.currentCanvas.save();
+  // SIGNALING
+
+  evaluatePermissions(permissions: SimplePermission[]) {
+    if (!this.signaling) return;
+    for (const p of permissions) {
+      this.signaling.createConnection(p.userId, true);
     }
   }
 
+  createPermission(permission: SimplePermission) {
+    this.currentCanvas.updateCanvas({
+      permissions: [...this.currentCanvas.permissions, permission]
+    });
+
+    this.signaling!.sendPathMessage(permission.userId, {
+      type: DataChannelMessageType.CREATE_PAPER,
+      paper: this.currentCanvas
+    });
+  }
   handleSignal(signal: SignalReceived) {
     if (this.signaling) this.signaling.handleSignal(signal);
   }
 }
 
-export const store = new Store();
-(window as any).store = store;
-export const storeContext = React.createContext(store);
+export const storeContext = React.createContext<Store | null>(null);
+
+export function useStore() {
+  const store = React.useContext(storeContext);
+  if (!store) {
+    throw Error("useStore should be used inside a Store provider.");
+  }
+  return store;
+}
+
+export function useCurrentCanvas() {
+  const store = useStore();
+  return store.currentCanvas;
+}
+
+export function useStores() {
+  const store = useStore();
+  return { store, authStore: store.authStore };
+}
