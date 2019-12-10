@@ -1,6 +1,5 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
   BaseEntity,
   Index,
@@ -15,7 +14,8 @@ import {
   ObjectType,
   registerEnumType,
   Int,
-  InputType
+  InputType,
+  Float
 } from "type-graphql";
 import { User } from "./User";
 
@@ -46,9 +46,10 @@ export class PaperRecording {
 @Entity()
 export class Paper extends BaseEntity {
   @Field()
-  @PrimaryGeneratedColumn("uuid")
+  @Index({ unique: true })
+  @PrimaryColumn({ unique: true })
   id: string;
-
+  
   @Field()
   @Column()
   name: string;
@@ -74,7 +75,7 @@ export class Paper extends BaseEntity {
   createdDate: Date;
 
   @Field(() => [PaperRecording])
-  @Column("jsonb", { default: '[]' })
+  @Column("jsonb", { default: "[]" })
   recording: PaperRecording[];
 
   @Field(() => Int)
@@ -117,12 +118,25 @@ export class PaperPermission extends BaseEntity {
 @ObjectType()
 @InputType("PaperPathDataInput")
 export class PaperPathData {
-  @Field(() => [Int])
+  @Field(() => [Float])
   x: number[];
-  @Field(() => [Int])
+  @Field(() => [Float])
   y: number[];
   @Field(() => [Int])
   t: number[];
+}
+
+@ObjectType()
+@InputType("PaperPathBoxInput")
+export class PaperPathBox {
+  @Field(() => Float)
+  minX: number;
+  @Field(() => Float)
+  minY: number;
+  @Field(() => Float)
+  maxX: number;
+  @Field(() => Float)
+  maxY: number;
 }
 
 @ObjectType()
@@ -153,9 +167,17 @@ export class PaperPath extends BaseEntity {
   @PrimaryColumn({ unsigned: true })
   id: number;
 
+  @Field({ nullable: true })
+  @Column({ nullable: true })
+  data: string | null;
+
   @Field(() => PaperPathData, { nullable: true })
   @Column("jsonb", { nullable: true })
-  data: PaperPathData | null;
+  points: PaperPathData | null;
+
+  @Field(() => PaperPathBox)
+  @Column("jsonb")
+  box: PaperPathBox;
 
   @Field(() => Int)
   @Column("integer")

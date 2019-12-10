@@ -1,0 +1,95 @@
+mutation CreatePaperPaths(
+  $paths: [PaperPathInput!]!
+  $device: String!
+  $paperId: String!
+) {
+  createPaperPaths(paths: $paths, device: $device, paperId: $paperId) {
+    error
+  }
+}
+
+mutation DeletePaperPaths($paths: [PaperPathDeleteInput!]!, $paperId: String!) {
+  deletePaperPaths(paths: $paths, paperId: $paperId) {
+    error
+  }
+}
+
+mutation UpdatePaperPaths($paths: [PaperPathUpdateInput!]!, $paperId: String!) {
+  updatePaperPaths(paths: $paths, paperId: $paperId) {
+    error
+  }
+}
+
+mutation CreatePaper($name: String!, $id: String!) {
+  createPaper(name: $name, id: $id) {
+    sequenceNumber
+    name
+    createdDate
+    id
+  }
+}
+
+query Papers {
+  papers {
+    id
+    name
+    ownerId
+    paths {
+      userId
+      device
+      id
+      data {
+        x
+        y
+        t
+      }
+      box {
+        minX
+        minY
+        maxX
+        maxY
+      }
+      sequenceNumber
+    }
+    permissions {
+      userId
+      type
+    }
+    sequenceNumber
+    createdDate
+  }
+}
+
+query PapersMeta {
+  papers {
+    id
+    name
+    ownerId
+    sequenceNumber
+    createdDate
+    permissions {
+      userId
+      type
+    }
+  }
+}
+
+mutation DeletePaper($paperId: String!) {
+  deletePaper(paperId: $paperId) {
+    error
+  }
+}
+
+mutation CreatePaperPermission(
+  $permissionType: PaperPermissionType!
+  $peerEmail: String!
+  $paperId: String!
+) {
+  createPaperPermission(
+    permissionType: $permissionType
+    peerEmail: $peerEmail
+    paperId: $paperId
+  ) {
+    error
+  }
+}

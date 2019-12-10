@@ -11,6 +11,29 @@ import { getMainDefinition } from "apollo-utilities";
 import { ApolloClient } from "apollo-client";
 import { InMemoryCache } from "apollo-cache-inmemory";
 
+import { library } from "@fortawesome/fontawesome-svg-core";
+import {
+  faTrashAlt,
+  faDownload,
+  faUpload,
+  faTimes,
+  faChevronCircleRight,
+  faChevronCircleLeft,
+  faShareAlt,
+  faSave
+} from "@fortawesome/free-solid-svg-icons";
+import { DeletePaperPathsDocument, DeletePaperPathsMutation } from "./generated/graphql";
+library.add(
+  faTrashAlt,
+  faDownload,
+  faUpload,
+  faTimes,
+  faChevronCircleRight,
+  faChevronCircleLeft,
+  faShareAlt,
+  faSave
+);
+
 // Create an http link:
 const httpLink = new HttpLink({
   uri: "http://localhost:4000/graphql",
@@ -40,7 +63,7 @@ const link = split(
   httpLink
 );
 
-const client = new ApolloClient({ link, cache: new InMemoryCache() });
+export const client = new ApolloClient({ link, cache: new InMemoryCache() });
 
 ReactDOM.render(
   <ApolloProvider client={client}>

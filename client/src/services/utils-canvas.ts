@@ -16,7 +16,6 @@ export enum TOOLS_TYPES {
 }
 export const ALL_TOOLS_TYPES = Object.keys(TOOLS_TYPES) as TOOLS_TYPES[];
 
-export type SavedPath = { x: number[]; y: number[]; t: number[] };
 export const cursors = {
   [TOOLS_TYPES.draw]: "url('assets/5_objects.png') 6 5, auto",
   [TOOLS_TYPES.erase]: "url('assets/eraser-black-sm.png') 3 22, auto",
@@ -24,23 +23,22 @@ export const cursors = {
   [TOOLS_TYPES.select]: "default"
 };
 
-export function itemBushFromPath(path: paper.Item) {
-  const { x, y, height, width } = path.internalBounds; 
+export function bushItemFromPath(path: paper.Item) {
+  const { x, y, height, width } = path.internalBounds;
   const bushItem = {
     minX: x,
     minY: y,
     maxX: x + width,
     maxY: y + height,
-    path: path,
-    id: path.id
+    path: path
   };
   return bushItem;
 }
-export type BushItem = ReturnType<typeof itemBushFromPath>;
+export type BushItem = ReturnType<typeof bushItemFromPath>;
 
 export const DEFAULT_STROKE_COLOR = new paper.Color("black");
 
-export const DEFAUTL_PATH_OPTIONS = {
+export const DEFAULT_PATH_OPTIONS = {
   strokeColor: DEFAULT_STROKE_COLOR,
   strokeWidth: 1.5,
   strokeCap: "round",

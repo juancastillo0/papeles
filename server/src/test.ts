@@ -8,4 +8,4 @@ const payloadVer = verify(token, secret);
 
 const delta = (payload as any).exp - Math.floor(Date.now() / 1000)
 console.log(delta/3600/24)
-console.log(payload, payloadVer, (payload as any).exp, Math.floor(Date.now() / 1000))
+console.log(payload, payloadVer, (payload as any).exp, Math.floor(Date.now() / 1000)) 

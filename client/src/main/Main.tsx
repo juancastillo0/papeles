@@ -18,7 +18,7 @@ const StyledDiv = styled.div`
     flex: 2;
   }
   #canvas-col {
-    min-width: 300px;
+    min-width: 410px;
     flex: 6;
   }
   #table-col {

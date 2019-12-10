@@ -16,14 +16,14 @@ export type Scalars = {
 export type CandidateSignalData = {
    __typename?: 'CandidateSignalData',
   candidate: Scalars['String'],
-  sdpMid: Scalars['String'],
-  sdpMLineIndex: Scalars['Int'],
+  sdpMid?: Maybe<Scalars['String']>,
+  sdpMLineIndex?: Maybe<Scalars['Int']>,
 };
 
 export type CandidateSignalDataInput = {
   candidate: Scalars['String'],
-  sdpMid: Scalars['String'],
-  sdpMLineIndex: Scalars['Int'],
+  sdpMid?: Maybe<Scalars['String']>,
+  sdpMLineIndex?: Maybe<Scalars['Int']>,
 };
 
 
@@ -45,33 +45,16 @@ export enum LoginResponseError {
 
 export type Mutation = {
    __typename?: 'Mutation',
-  createPaperPermission?: Maybe<GenericError>,
-  createPaper?: Maybe<Paper>,
-  createPaperPath?: Maybe<GenericError>,
   register: RegisterResponse,
   login: LoginResponse,
   logout?: Maybe<GenericError>,
   sendSignal?: Maybe<GenericError>,
-};
-
-
-export type MutationCreatePaperPermissionArgs = {
-  permissionType: PaperPermissionType,
-  peerId: Scalars['String'],
-  paperId: Scalars['String']
-};
-
-
-export type MutationCreatePaperArgs = {
-  name: Scalars['String']
-};
-
-
-export type MutationCreatePaperPathArgs = {
-  data: PaperPathDataInput,
-  id: Scalars['Int'],
-  device: Scalars['String'],
-  paperId: Scalars['String']
+  createPaperPermission?: Maybe<GenericError>,
+  createPaper?: Maybe<Paper>,
+  deletePaper?: Maybe<GenericError>,
+  deletePaperPaths?: Maybe<GenericError>,
+  updatePaperPaths?: Maybe<GenericError>,
+  createPaperPaths?: Maybe<GenericError>,
 };
 
 
@@ -89,7 +72,45 @@ export type MutationLoginArgs = {
 
 
 export type MutationSendSignalArgs = {
-  signal: SignalInput
+  signal: SignalSent,
+  peerId: Scalars['String']
+};
+
+
+export type MutationCreatePaperPermissionArgs = {
+  permissionType: PaperPermissionType,
+  peerEmail: Scalars['String'],
+  paperId: Scalars['String']
+};
+
+
+export type MutationCreatePaperArgs = {
+  name: Scalars['String'],
+  id: Scalars['String']
+};
+
+
+export type MutationDeletePaperArgs = {
+  paperId: Scalars['String']
+};
+
+
+export type MutationDeletePaperPathsArgs = {
+  paths: Array<PaperPathDeleteInput>,
+  paperId: Scalars['String']
+};
+
+
+export type MutationUpdatePaperPathsArgs = {
+  paths: Array<PaperPathUpdateInput>,
+  paperId: Scalars['String']
+};
+
+
+export type MutationCreatePaperPathsArgs = {
+  paths: Array<PaperPathInput>,
+  device: Scalars['String'],
+  paperId: Scalars['String']
 };
 
 export type Paper = {
@@ -101,6 +122,8 @@ export type Paper = {
   permissions: Array<PaperPermission>,
   paths: Array<PaperPath>,
   createdDate: Scalars['DateTime'],
+  recording: Array<PaperRecording>,
+  sequenceNumber: Scalars['Int'],
 };
 
 export type PaperPath = {
@@ -111,20 +134,56 @@ export type PaperPath = {
   userId: Scalars['String'],
   device: Scalars['String'],
   id: Scalars['Int'],
-  data: PaperPathData,
+  data?: Maybe<PaperPathData>,
+  box: PaperPathBox,
+  sequenceNumber: Scalars['Int'],
+};
+
+export type PaperPathBox = {
+   __typename?: 'PaperPathBox',
+  minX: Scalars['Float'],
+  minY: Scalars['Float'],
+  maxX: Scalars['Float'],
+  maxY: Scalars['Float'],
+};
+
+export type PaperPathBoxInput = {
+  minX: Scalars['Float'],
+  minY: Scalars['Float'],
+  maxX: Scalars['Float'],
+  maxY: Scalars['Float'],
 };
 
 export type PaperPathData = {
    __typename?: 'PaperPathData',
-  x: Array<Scalars['Int']>,
-  y: Array<Scalars['Int']>,
+  x: Array<Scalars['Float']>,
+  y: Array<Scalars['Float']>,
   t: Array<Scalars['Int']>,
 };
 
 export type PaperPathDataInput = {
-  x: Array<Scalars['Int']>,
-  y: Array<Scalars['Int']>,
+  x: Array<Scalars['Float']>,
+  y: Array<Scalars['Float']>,
   t: Array<Scalars['Int']>,
+};
+
+export type PaperPathDeleteInput = {
+  id: Scalars['Int'],
+  userId: Scalars['String'],
+  device: Scalars['String'],
+};
+
+export type PaperPathInput = {
+  id: Scalars['Int'],
+  data: PaperPathDataInput,
+  box: PaperPathBoxInput,
+};
+
+export type PaperPathUpdateInput = {
+  id: Scalars['Int'],
+  userId: Scalars['String'],
+  device: Scalars['String'],
+  box: PaperPathBoxInput,
 };
 
 export type PaperPermission = {
@@ -142,13 +201,20 @@ export enum PaperPermissionType {
   Admin = 'ADMIN'
 }
 
+export type PaperRecording = {
+   __typename?: 'PaperRecording',
+  userId: Scalars['String'],
+  device: Scalars['String'],
+  lastId: Scalars['Int'],
+};
+
 export type Query = {
    __typename?: 'Query',
-  papers: Array<Paper>,
   users: Array<User>,
   userById?: Maybe<User>,
   userByEmail?: Maybe<User>,
   profile: User,
+  papers: Array<Paper>,
 };
 
 
@@ -173,14 +239,15 @@ export enum RegisterResponseError {
   BadPassword = 'BAD_PASSWORD'
 }
 
-export type Signal = {
-   __typename?: 'Signal',
+export type SignalReceived = {
+   __typename?: 'SignalReceived',
+  userId: Scalars['String'],
   type: SignalType,
   sdp?: Maybe<Scalars['String']>,
   candidate?: Maybe<CandidateSignalData>,
 };
 
-export type SignalInput = {
+export type SignalSent = {
   type: SignalType,
   sdp?: Maybe<Scalars['String']>,
   candidate?: Maybe<CandidateSignalDataInput>,
@@ -194,7 +261,7 @@ export enum SignalType {
 
 export type Subscription = {
    __typename?: 'Subscription',
-  signals: Signal,
+  signals: SignalReceived,
 };
 
 export type User = {
@@ -266,14 +333,139 @@ export type LogoutMutation = (
   )> }
 );
 
+export type CreatePaperPathsMutationVariables = {
+  paths: Array<PaperPathInput>,
+  device: Scalars['String'],
+  paperId: Scalars['String']
+};
+
+
+export type CreatePaperPathsMutation = (
+  { __typename?: 'Mutation' }
+  & { createPaperPaths: Maybe<(
+    { __typename?: 'GenericError' }
+    & Pick<GenericError, 'error'>
+  )> }
+);
+
+export type DeletePaperPathsMutationVariables = {
+  paths: Array<PaperPathDeleteInput>,
+  paperId: Scalars['String']
+};
+
+
+export type DeletePaperPathsMutation = (
+  { __typename?: 'Mutation' }
+  & { deletePaperPaths: Maybe<(
+    { __typename?: 'GenericError' }
+    & Pick<GenericError, 'error'>
+  )> }
+);
+
+export type UpdatePaperPathsMutationVariables = {
+  paths: Array<PaperPathUpdateInput>,
+  paperId: Scalars['String']
+};
+
+
+export type UpdatePaperPathsMutation = (
+  { __typename?: 'Mutation' }
+  & { updatePaperPaths: Maybe<(
+    { __typename?: 'GenericError' }
+    & Pick<GenericError, 'error'>
+  )> }
+);
+
+export type CreatePaperMutationVariables = {
+  name: Scalars['String'],
+  id: Scalars['String']
+};
+
+
+export type CreatePaperMutation = (
+  { __typename?: 'Mutation' }
+  & { createPaper: Maybe<(
+    { __typename?: 'Paper' }
+    & Pick<Paper, 'sequenceNumber' | 'name' | 'createdDate' | 'id'>
+  )> }
+);
+
+export type PapersQueryVariables = {};
+
+
+export type PapersQuery = (
+  { __typename?: 'Query' }
+  & { papers: Array<(
+    { __typename?: 'Paper' }
+    & Pick<Paper, 'id' | 'name' | 'ownerId' | 'sequenceNumber' | 'createdDate'>
+    & { paths: Array<(
+      { __typename?: 'PaperPath' }
+      & Pick<PaperPath, 'userId' | 'device' | 'id' | 'sequenceNumber'>
+      & { data: Maybe<(
+        { __typename?: 'PaperPathData' }
+        & Pick<PaperPathData, 'x' | 'y' | 't'>
+      )>, box: (
+        { __typename?: 'PaperPathBox' }
+        & Pick<PaperPathBox, 'minX' | 'minY' | 'maxX' | 'maxY'>
+      ) }
+    )>, permissions: Array<(
+      { __typename?: 'PaperPermission' }
+      & Pick<PaperPermission, 'userId' | 'type'>
+    )> }
+  )> }
+);
+
+export type PapersMetaQueryVariables = {};
+
+
+export type PapersMetaQuery = (
+  { __typename?: 'Query' }
+  & { papers: Array<(
+    { __typename?: 'Paper' }
+    & Pick<Paper, 'id' | 'name' | 'ownerId' | 'sequenceNumber' | 'createdDate'>
+    & { permissions: Array<(
+      { __typename?: 'PaperPermission' }
+      & Pick<PaperPermission, 'userId' | 'type'>
+    )> }
+  )> }
+);
+
+export type DeletePaperMutationVariables = {
+  paperId: Scalars['String']
+};
+
+
+export type DeletePaperMutation = (
+  { __typename?: 'Mutation' }
+  & { deletePaper: Maybe<(
+    { __typename?: 'GenericError' }
+    & Pick<GenericError, 'error'>
+  )> }
+);
+
+export type CreatePaperPermissionMutationVariables = {
+  permissionType: PaperPermissionType,
+  peerEmail: Scalars['String'],
+  paperId: Scalars['String']
+};
+
+
+export type CreatePaperPermissionMutation = (
+  { __typename?: 'Mutation' }
+  & { createPaperPermission: Maybe<(
+    { __typename?: 'GenericError' }
+    & Pick<GenericError, 'error'>
+  )> }
+);
+
 export type SignalsSubscriptionVariables = {};
 
 
 export type SignalsSubscription = (
   { __typename?: 'Subscription' }
   & { signals: (
-    { __typename?: 'Signal' }
-    & Pick<Signal, 'type' | 'sdp'>
+    { __typename?: 'SignalReceived' }
+    & Pick<SignalReceived, 'type' | 'sdp' | 'userId'>
     & { candidate: Maybe<(
       { __typename?: 'CandidateSignalData' }
       & Pick<CandidateSignalData, 'sdpMid' | 'candidate' | 'sdpMLineIndex'>
@@ -283,7 +475,8 @@ export type SignalsSubscription = (
 
 export type SendSdpSignalMutationVariables = {
   type: SignalType,
-  sdp: Scalars['String']
+  sdp: Scalars['String'],
+  peerId: Scalars['String']
 };
 
 
@@ -295,14 +488,15 @@ export type SendSdpSignalMutation = (
   )> }
 );
 
-export type SendCandidateMutationVariables = {
+export type SendCandidateSignalMutationVariables = {
   candidate: Scalars['String'],
-  sdpMid: Scalars['String'],
-  sdpMLineIndex: Scalars['Int']
+  sdpMid?: Maybe<Scalars['String']>,
+  sdpMLineIndex?: Maybe<Scalars['Int']>,
+  peerId: Scalars['String']
 };
 
 
-export type SendCandidateMutation = (
+export type SendCandidateSignalMutation = (
   { __typename?: 'Mutation' }
   & { sendSignal: Maybe<(
     { __typename?: 'GenericError' }
@@ -453,11 +647,311 @@ export function useLogoutMutation(baseOptions?: ApolloReactHooks.MutationHookOpt
 export type LogoutMutationHookResult = ReturnType<typeof useLogoutMutation>;
 export type LogoutMutationResult = ApolloReactCommon.MutationResult<LogoutMutation>;
 export type LogoutMutationOptions = ApolloReactCommon.BaseMutationOptions<LogoutMutation, LogoutMutationVariables>;
+export const CreatePaperPathsDocument = gql`
+    mutation CreatePaperPaths($paths: [PaperPathInput!]!, $device: String!, $paperId: String!) {
+  createPaperPaths(paths: $paths, device: $device, paperId: $paperId) {
+    error
+  }
+}
+    `;
+export type CreatePaperPathsMutationFn = ApolloReactCommon.MutationFunction<CreatePaperPathsMutation, CreatePaperPathsMutationVariables>;
+
+/**
+ * __useCreatePaperPathsMutation__
+ *
+ * To run a mutation, you first call `useCreatePaperPathsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreatePaperPathsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createPaperPathsMutation, { data, loading, error }] = useCreatePaperPathsMutation({
+ *   variables: {
+ *      paths: // value for 'paths'
+ *      device: // value for 'device'
+ *      paperId: // value for 'paperId'
+ *   },
+ * });
+ */
+export function useCreatePaperPathsMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<CreatePaperPathsMutation, CreatePaperPathsMutationVariables>) {
+        return ApolloReactHooks.useMutation<CreatePaperPathsMutation, CreatePaperPathsMutationVariables>(CreatePaperPathsDocument, baseOptions);
+      }
+export type CreatePaperPathsMutationHookResult = ReturnType<typeof useCreatePaperPathsMutation>;
+export type CreatePaperPathsMutationResult = ApolloReactCommon.MutationResult<CreatePaperPathsMutation>;
+export type CreatePaperPathsMutationOptions = ApolloReactCommon.BaseMutationOptions<CreatePaperPathsMutation, CreatePaperPathsMutationVariables>;
+export const DeletePaperPathsDocument = gql`
+    mutation DeletePaperPaths($paths: [PaperPathDeleteInput!]!, $paperId: String!) {
+  deletePaperPaths(paths: $paths, paperId: $paperId) {
+    error
+  }
+}
+    `;
+export type DeletePaperPathsMutationFn = ApolloReactCommon.MutationFunction<DeletePaperPathsMutation, DeletePaperPathsMutationVariables>;
+
+/**
+ * __useDeletePaperPathsMutation__
+ *
+ * To run a mutation, you first call `useDeletePaperPathsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeletePaperPathsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deletePaperPathsMutation, { data, loading, error }] = useDeletePaperPathsMutation({
+ *   variables: {
+ *      paths: // value for 'paths'
+ *      paperId: // value for 'paperId'
+ *   },
+ * });
+ */
+export function useDeletePaperPathsMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<DeletePaperPathsMutation, DeletePaperPathsMutationVariables>) {
+        return ApolloReactHooks.useMutation<DeletePaperPathsMutation, DeletePaperPathsMutationVariables>(DeletePaperPathsDocument, baseOptions);
+      }
+export type DeletePaperPathsMutationHookResult = ReturnType<typeof useDeletePaperPathsMutation>;
+export type DeletePaperPathsMutationResult = ApolloReactCommon.MutationResult<DeletePaperPathsMutation>;
+export type DeletePaperPathsMutationOptions = ApolloReactCommon.BaseMutationOptions<DeletePaperPathsMutation, DeletePaperPathsMutationVariables>;
+export const UpdatePaperPathsDocument = gql`
+    mutation UpdatePaperPaths($paths: [PaperPathUpdateInput!]!, $paperId: String!) {
+  updatePaperPaths(paths: $paths, paperId: $paperId) {
+    error
+  }
+}
+    `;
+export type UpdatePaperPathsMutationFn = ApolloReactCommon.MutationFunction<UpdatePaperPathsMutation, UpdatePaperPathsMutationVariables>;
+
+/**
+ * __useUpdatePaperPathsMutation__
+ *
+ * To run a mutation, you first call `useUpdatePaperPathsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdatePaperPathsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updatePaperPathsMutation, { data, loading, error }] = useUpdatePaperPathsMutation({
+ *   variables: {
+ *      paths: // value for 'paths'
+ *      paperId: // value for 'paperId'
+ *   },
+ * });
+ */
+export function useUpdatePaperPathsMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<UpdatePaperPathsMutation, UpdatePaperPathsMutationVariables>) {
+        return ApolloReactHooks.useMutation<UpdatePaperPathsMutation, UpdatePaperPathsMutationVariables>(UpdatePaperPathsDocument, baseOptions);
+      }
+export type UpdatePaperPathsMutationHookResult = ReturnType<typeof useUpdatePaperPathsMutation>;
+export type UpdatePaperPathsMutationResult = ApolloReactCommon.MutationResult<UpdatePaperPathsMutation>;
+export type UpdatePaperPathsMutationOptions = ApolloReactCommon.BaseMutationOptions<UpdatePaperPathsMutation, UpdatePaperPathsMutationVariables>;
+export const CreatePaperDocument = gql`
+    mutation CreatePaper($name: String!, $id: String!) {
+  createPaper(name: $name, id: $id) {
+    sequenceNumber
+    name
+    createdDate
+    id
+  }
+}
+    `;
+export type CreatePaperMutationFn = ApolloReactCommon.MutationFunction<CreatePaperMutation, CreatePaperMutationVariables>;
+
+/**
+ * __useCreatePaperMutation__
+ *
+ * To run a mutation, you first call `useCreatePaperMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreatePaperMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createPaperMutation, { data, loading, error }] = useCreatePaperMutation({
+ *   variables: {
+ *      name: // value for 'name'
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useCreatePaperMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<CreatePaperMutation, CreatePaperMutationVariables>) {
+        return ApolloReactHooks.useMutation<CreatePaperMutation, CreatePaperMutationVariables>(CreatePaperDocument, baseOptions);
+      }
+export type CreatePaperMutationHookResult = ReturnType<typeof useCreatePaperMutation>;
+export type CreatePaperMutationResult = ApolloReactCommon.MutationResult<CreatePaperMutation>;
+export type CreatePaperMutationOptions = ApolloReactCommon.BaseMutationOptions<CreatePaperMutation, CreatePaperMutationVariables>;
+export const PapersDocument = gql`
+    query Papers {
+  papers {
+    id
+    name
+    ownerId
+    paths {
+      userId
+      device
+      id
+      data {
+        x
+        y
+        t
+      }
+      box {
+        minX
+        minY
+        maxX
+        maxY
+      }
+      sequenceNumber
+    }
+    permissions {
+      userId
+      type
+    }
+    sequenceNumber
+    createdDate
+  }
+}
+    `;
+
+/**
+ * __usePapersQuery__
+ *
+ * To run a query within a React component, call `usePapersQuery` and pass it any options that fit your needs.
+ * When your component renders, `usePapersQuery` returns an object from Apollo Client that contains loading, error, and data properties 
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePapersQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function usePapersQuery(baseOptions?: ApolloReactHooks.QueryHookOptions<PapersQuery, PapersQueryVariables>) {
+        return ApolloReactHooks.useQuery<PapersQuery, PapersQueryVariables>(PapersDocument, baseOptions);
+      }
+export function usePapersLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<PapersQuery, PapersQueryVariables>) {
+          return ApolloReactHooks.useLazyQuery<PapersQuery, PapersQueryVariables>(PapersDocument, baseOptions);
+        }
+export type PapersQueryHookResult = ReturnType<typeof usePapersQuery>;
+export type PapersLazyQueryHookResult = ReturnType<typeof usePapersLazyQuery>;
+export type PapersQueryResult = ApolloReactCommon.QueryResult<PapersQuery, PapersQueryVariables>;
+export const PapersMetaDocument = gql`
+    query PapersMeta {
+  papers {
+    id
+    name
+    ownerId
+    sequenceNumber
+    createdDate
+    permissions {
+      userId
+      type
+    }
+  }
+}
+    `;
+
+/**
+ * __usePapersMetaQuery__
+ *
+ * To run a query within a React component, call `usePapersMetaQuery` and pass it any options that fit your needs.
+ * When your component renders, `usePapersMetaQuery` returns an object from Apollo Client that contains loading, error, and data properties 
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePapersMetaQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function usePapersMetaQuery(baseOptions?: ApolloReactHooks.QueryHookOptions<PapersMetaQuery, PapersMetaQueryVariables>) {
+        return ApolloReactHooks.useQuery<PapersMetaQuery, PapersMetaQueryVariables>(PapersMetaDocument, baseOptions);
+      }
+export function usePapersMetaLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<PapersMetaQuery, PapersMetaQueryVariables>) {
+          return ApolloReactHooks.useLazyQuery<PapersMetaQuery, PapersMetaQueryVariables>(PapersMetaDocument, baseOptions);
+        }
+export type PapersMetaQueryHookResult = ReturnType<typeof usePapersMetaQuery>;
+export type PapersMetaLazyQueryHookResult = ReturnType<typeof usePapersMetaLazyQuery>;
+export type PapersMetaQueryResult = ApolloReactCommon.QueryResult<PapersMetaQuery, PapersMetaQueryVariables>;
+export const DeletePaperDocument = gql`
+    mutation DeletePaper($paperId: String!) {
+  deletePaper(paperId: $paperId) {
+    error
+  }
+}
+    `;
+export type DeletePaperMutationFn = ApolloReactCommon.MutationFunction<DeletePaperMutation, DeletePaperMutationVariables>;
+
+/**
+ * __useDeletePaperMutation__
+ *
+ * To run a mutation, you first call `useDeletePaperMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeletePaperMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deletePaperMutation, { data, loading, error }] = useDeletePaperMutation({
+ *   variables: {
+ *      paperId: // value for 'paperId'
+ *   },
+ * });
+ */
+export function useDeletePaperMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<DeletePaperMutation, DeletePaperMutationVariables>) {
+        return ApolloReactHooks.useMutation<DeletePaperMutation, DeletePaperMutationVariables>(DeletePaperDocument, baseOptions);
+      }
+export type DeletePaperMutationHookResult = ReturnType<typeof useDeletePaperMutation>;
+export type DeletePaperMutationResult = ApolloReactCommon.MutationResult<DeletePaperMutation>;
+export type DeletePaperMutationOptions = ApolloReactCommon.BaseMutationOptions<DeletePaperMutation, DeletePaperMutationVariables>;
+export const CreatePaperPermissionDocument = gql`
+    mutation CreatePaperPermission($permissionType: PaperPermissionType!, $peerEmail: String!, $paperId: String!) {
+  createPaperPermission(permissionType: $permissionType, peerEmail: $peerEmail, paperId: $paperId) {
+    error
+  }
+}
+    `;
+export type CreatePaperPermissionMutationFn = ApolloReactCommon.MutationFunction<CreatePaperPermissionMutation, CreatePaperPermissionMutationVariables>;
+
+/**
+ * __useCreatePaperPermissionMutation__
+ *
+ * To run a mutation, you first call `useCreatePaperPermissionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreatePaperPermissionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createPaperPermissionMutation, { data, loading, error }] = useCreatePaperPermissionMutation({
+ *   variables: {
+ *      permissionType: // value for 'permissionType'
+ *      peerEmail: // value for 'peerEmail'
+ *      paperId: // value for 'paperId'
+ *   },
+ * });
+ */
+export function useCreatePaperPermissionMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<CreatePaperPermissionMutation, CreatePaperPermissionMutationVariables>) {
+        return ApolloReactHooks.useMutation<CreatePaperPermissionMutation, CreatePaperPermissionMutationVariables>(CreatePaperPermissionDocument, baseOptions);
+      }
+export type CreatePaperPermissionMutationHookResult = ReturnType<typeof useCreatePaperPermissionMutation>;
+export type CreatePaperPermissionMutationResult = ApolloReactCommon.MutationResult<CreatePaperPermissionMutation>;
+export type CreatePaperPermissionMutationOptions = ApolloReactCommon.BaseMutationOptions<CreatePaperPermissionMutation, CreatePaperPermissionMutationVariables>;
 export const SignalsDocument = gql`
     subscription Signals {
   signals {
     type
     sdp
+    userId
     candidate {
       sdpMid
       candidate
@@ -488,8 +982,8 @@ export function useSignalsSubscription(baseOptions?: ApolloReactHooks.Subscripti
 export type SignalsSubscriptionHookResult = ReturnType<typeof useSignalsSubscription>;
 export type SignalsSubscriptionResult = ApolloReactCommon.SubscriptionResult<SignalsSubscription>;
 export const SendSdpSignalDocument = gql`
-    mutation SendSDPSignal($type: SignalType!, $sdp: String!) {
-  sendSignal(signal: {type: $type, sdp: $sdp}) {
+    mutation SendSdpSignal($type: SignalType!, $sdp: String!, $peerId: String!) {
+  sendSignal(peerId: $peerId, signal: {type: $type, sdp: $sdp}) {
     error
   }
 }
@@ -511,6 +1005,7 @@ export type SendSdpSignalMutationFn = ApolloReactCommon.MutationFunction<SendSdp
  *   variables: {
  *      type: // value for 'type'
  *      sdp: // value for 'sdp'
+ *      peerId: // value for 'peerId'
  *   },
  * });
  */
@@ -520,37 +1015,38 @@ export function useSendSdpSignalMutation(baseOptions?: ApolloReactHooks.Mutation
 export type SendSdpSignalMutationHookResult = ReturnType<typeof useSendSdpSignalMutation>;
 export type SendSdpSignalMutationResult = ApolloReactCommon.MutationResult<SendSdpSignalMutation>;
 export type SendSdpSignalMutationOptions = ApolloReactCommon.BaseMutationOptions<SendSdpSignalMutation, SendSdpSignalMutationVariables>;
-export const SendCandidateDocument = gql`
-    mutation SendCandidate($candidate: String!, $sdpMid: String!, $sdpMLineIndex: Int!) {
-  sendSignal(signal: {type: candidate, candidate: {candidate: $candidate, sdpMid: $sdpMid, sdpMLineIndex: $sdpMLineIndex}}) {
+export const SendCandidateSignalDocument = gql`
+    mutation SendCandidateSignal($candidate: String!, $sdpMid: String, $sdpMLineIndex: Int, $peerId: String!) {
+  sendSignal(peerId: $peerId, signal: {type: candidate, candidate: {candidate: $candidate, sdpMid: $sdpMid, sdpMLineIndex: $sdpMLineIndex}}) {
     error
   }
 }
     `;
-export type SendCandidateMutationFn = ApolloReactCommon.MutationFunction<SendCandidateMutation, SendCandidateMutationVariables>;
+export type SendCandidateSignalMutationFn = ApolloReactCommon.MutationFunction<SendCandidateSignalMutation, SendCandidateSignalMutationVariables>;
 
 /**
- * __useSendCandidateMutation__
+ * __useSendCandidateSignalMutation__
  *
- * To run a mutation, you first call `useSendCandidateMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useSendCandidateMutation` returns a tuple that includes:
+ * To run a mutation, you first call `useSendCandidateSignalMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSendCandidateSignalMutation` returns a tuple that includes:
  * - A mutate function that you can call at any time to execute the mutation
  * - An object with fields that represent the current status of the mutation's execution
  *
  * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
  *
  * @example
- * const [sendCandidateMutation, { data, loading, error }] = useSendCandidateMutation({
+ * const [sendCandidateSignalMutation, { data, loading, error }] = useSendCandidateSignalMutation({
  *   variables: {
  *      candidate: // value for 'candidate'
  *      sdpMid: // value for 'sdpMid'
  *      sdpMLineIndex: // value for 'sdpMLineIndex'
+ *      peerId: // value for 'peerId'
  *   },
  * });
  */
-export function useSendCandidateMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<SendCandidateMutation, SendCandidateMutationVariables>) {
-        return ApolloReactHooks.useMutation<SendCandidateMutation, SendCandidateMutationVariables>(SendCandidateDocument, baseOptions);
+export function useSendCandidateSignalMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<SendCandidateSignalMutation, SendCandidateSignalMutationVariables>) {
+        return ApolloReactHooks.useMutation<SendCandidateSignalMutation, SendCandidateSignalMutationVariables>(SendCandidateSignalDocument, baseOptions);
       }
-export type SendCandidateMutationHookResult = ReturnType<typeof useSendCandidateMutation>;
-export type SendCandidateMutationResult = ApolloReactCommon.MutationResult<SendCandidateMutation>;
-export type SendCandidateMutationOptions = ApolloReactCommon.BaseMutationOptions<SendCandidateMutation, SendCandidateMutationVariables>;
+export type SendCandidateSignalMutationHookResult = ReturnType<typeof useSendCandidateSignalMutation>;
+export type SendCandidateSignalMutationResult = ApolloReactCommon.MutationResult<SendCandidateSignalMutation>;
+export type SendCandidateSignalMutationOptions = ApolloReactCommon.BaseMutationOptions<SendCandidateSignalMutation, SendCandidateSignalMutationVariables>;

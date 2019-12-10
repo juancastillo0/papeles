@@ -21,6 +21,34 @@ import {
 import { getConnection, Brackets } from "typeorm";
 import { GenericError } from "./utils";
 
+export function isOwnerOrAdmin({
+  paperId,
+  userId
+}: {
+  paperId: string;
+  userId: string;
+}): Promise<Paper | undefined> {
+  return getConnection()
+    .getRepository(Paper)
+    .createQueryBuilder("p")
+    .leftJoin(PaperPermission, "pp", 'pp."paperId" = p.id')
+    .where("p.id = :paperId", { paperId })
+    .andWhere(
+      new Brackets(qb => {
+        qb.where('p."ownerId" = :userId', { userId }).orWhere(
+          new Brackets(qb2 => {
+            qb2
+              .where('pp."userId" = :userId', { userId })
+              .andWhere("pp.type = :permissionType", {
+                permissionType: PaperPermissionType.ADMIN
+              });
+          })
+        );
+      })
+    )
+    .getOne();
+}
+
 @Resolver()
 export class PaperResolver {
   @Query(() => [Paper])
@@ -41,36 +69,20 @@ export class PaperResolver {
   @UseMiddleware(isAuth)
   async createPaperPermission(
     @Arg("paperId") paperId: string,
-    @Arg("peerId") peerId: string,
+    @Arg("peerEmail") peerEmail: string,
     @Arg("permissionType", () => PaperPermissionType)
     permissionType: PaperPermissionType,
     @Ctx() context: RequestContext
   ): Promise<GenericError | null> {
     const userId = context.payload!.id;
-    const paper = await getConnection()
-      .getRepository(Paper)
-      .createQueryBuilder("p")
-      .leftJoin(PaperPermission, "pp", 'pp."paperId" = p.id')
-      .where("p.id = :paperId", { paperId })
-      .andWhere(
-        new Brackets(qb => {
-          qb.where('p."ownerId" = :userId', { userId }).orWhere(
-            new Brackets(qb2 => {
-              qb2
-                .where('pp."userId" = :userId', { userId })
-                .andWhere("pp.type = :permissionType", {
-                  permissionType: PaperPermissionType.ADMIN
-                });
-            })
-          );
-        })
-      )
-      .getOne();
+    const paper = await isOwnerOrAdmin({ userId, paperId });
 
-    if (!paper)
-      return new GenericError("Paper doesn't exist or you don't have access");
-    const peer = await User.findOne({ where: { id: peerId } });
-    if (!peer) return new GenericError("Peer doesn't exist");
+    if (!paper) return new GenericError("Not authorized");
+    const peer = await User.findOne({
+      where: { email: peerEmail.trim().toLowerCase() }
+    });
+    if (!peer)
+      return new GenericError("No hay usuarios con el email especificado.");
 
     try {
       const permission = PaperPermission.create({
@@ -89,11 +101,12 @@ export class PaperResolver {
   @Mutation(() => Paper, { nullable: true })
   @UseMiddleware(isAuth)
   async createPaper(
+    @Arg("id") id: string,
     @Arg("name") name: string,
     @Ctx() context: RequestContext
   ): Promise<Paper | null> {
     const userId = context.payload!.id;
-    const paper = Paper.create({ name, owner: User.create({ id: userId }) });
+    const paper = Paper.create({ name, ownerId: userId, id });
 
     try {
       await paper.save();
@@ -103,8 +116,29 @@ export class PaperResolver {
       return null;
     }
   }
-}
 
+  @Mutation(() => GenericError, { nullable: true })
+  @UseMiddleware(isAuth)
+  async deletePaper(
+    @Arg("paperId") paperId: string,
+    @Ctx() context: RequestContext
+  ) {
+    const userId = context.payload!.id;
+    const paper = await Paper.findOne({
+      where: { id: paperId, ownerId: userId }
+    });
+    if (!paper) {
+      return new GenericError("Not authorized");
+    }
+
+    try {
+      await paper.remove();
+      return null;
+    } catch (e) {
+      return new GenericError(e.message);
+    }
+  }
+}
 
 @Resolver(() => Paper)
 export class PaperModelResolver implements ResolverInterface<Paper> {

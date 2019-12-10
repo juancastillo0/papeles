@@ -3,6 +3,7 @@ import { BrowserRouter, Route } from "react-router-dom";
 import { Main } from "./main/Main";
 import { Auth, AUTH_PATHS } from "./auth/Auth";
 import { NavBar } from "./components/NavBar";
+import { Modal } from "./components/Modal";
 
 const App: React.FC = () => {
   return (
@@ -10,6 +11,7 @@ const App: React.FC = () => {
       <NavBar />
       <Route exact path="/" component={Main} />
       <Route exact path={AUTH_PATHS} component={Auth} />
+      <Modal/> 
     </BrowserRouter>
   );
 };

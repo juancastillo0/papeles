@@ -63,7 +63,6 @@ function resizeHandler(
     if (event instanceof MouseEvent) {
       pos = event[keys.direction];
     } else {
-      event = event as TouchEvent;
       pos = event.changedTouches[0][keys.direction];
       touching = true;
     }
@@ -119,7 +118,6 @@ const Resizer: React.FC<Props> = (
   }
 ) => {
   const [wrapperRef, setWrapperRef] = useState<HTMLDivElement | null>(null);
-
   const onMouseDown = useCallback(
     resizeHandler(wrapperRef, !!vertical, !!leftOrTop),
     [wrapperRef]

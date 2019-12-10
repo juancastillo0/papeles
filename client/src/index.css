@@ -54,11 +54,10 @@ code {
   white-space: nowrap;
 }
 
-.canvas {
-  height: 1000px;
-  width: 1000px;
+button:hover {
+  cursor: pointer;
+  filter: brightness(95%);
 }
-
 
 .f1 {
   flex: 1;

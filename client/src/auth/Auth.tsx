@@ -6,7 +6,7 @@ import { observer } from "mobx-react-lite";
 import * as formik from "formik";
 import * as yup from "yup";
 import { TextField } from "./TextField";
-import { useLoginMutation, useRegisterMutation } from "../generated/graphql";
+import { useLoginMutation, useRegisterMutation, RegisterResponseError } from "../generated/graphql";
 
 export const SIGNUP_PATHS = ["/signup", "/register", "/registrarse"];
 export const AUTH_PATHS = [
@@ -62,6 +62,10 @@ export const Auth: React.FC = observer(() => {
       try {
         if (isSigningUp) {
           const result = await registerFn(params);
+          result.data!.register.user!.
+          if( result.data!.register.error  && result.data!.register.error === RegisterResponseError.){
+
+          }
           const data = result.data!.register;
           if (data.error) {
             setError(data.error);

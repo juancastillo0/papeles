@@ -19,40 +19,44 @@ export type RequestContext = {
   payload?: { id: string; email: string };
 };
 
-(async () => {
-  await createConnection();
-  startRemovingBlackListedTokens();
+try {
+  (async () => {
+    await createConnection();
+    startRemovingBlackListedTokens();
 
-  const app = express();
-  app.use(
-    cors({
-      origin: "http://localhost:3000",
-      credentials: true
-    })
-  );
-  app.use(cookieParser());
-  const apolloServer = new ApolloServer({ 
-    schema: await buildSchema({
-      resolvers: [
-        UserResolver,
-        PaperResolver,
-        PaperModelResolver,
-        UserModelResolver,
-        PaperPathResolver
-      ]
-    }),
-    context: ({ req, res }) => ({ req, res })
-  });
+    const app = express();
+    app.use(
+      cors({
+        origin: "http://localhost:3000",
+        credentials: true
+      })
+    );
+    app.use(cookieParser());
+    const apolloServer = new ApolloServer({
+      schema: await buildSchema({
+        resolvers: [
+          UserResolver,
+          PaperResolver,
+          PaperModelResolver,
+          UserModelResolver,
+          PaperPathResolver
+        ]
+      }),
+      context: ({ req, res }) => ({ req, res })
+    });
 
-  apolloServer.applyMiddleware({
-    app,
-    cors: false
-  });
+    apolloServer.applyMiddleware({
+      app,
+      cors: false
+    });
 
-  const httpServer = http.createServer(app);
-  apolloServer.installSubscriptionHandlers(httpServer);
+    const httpServer = http.createServer(app);
+    apolloServer.installSubscriptionHandlers(httpServer);
 
-  httpServer.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
-})();
+    httpServer.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);  
+    });
+  })();
+} catch (e) {
+  console.error(e);  
+}

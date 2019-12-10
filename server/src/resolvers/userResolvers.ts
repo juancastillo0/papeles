@@ -83,15 +83,25 @@ registerEnumType(SignalType, { name: "SignalType" });
 class CandidateSignalData {
   @Field()
   candidate: string;
-  @Field()
-  sdpMid: string;
-  @Field(() => Int)
-  sdpMLineIndex: number;
+  @Field({ nullable: true })
+  sdpMid?: string;
+  @Field(() => Int, { nullable: true })
+  sdpMLineIndex?: number;
 }
 
+@InputType()
+class SignalSent {
+  @Field(() => SignalType)
+  type: SignalType;
+  @Field({ nullable: true })
+  sdp?: string;
+  @Field({ nullable: true })
+  candidate?: CandidateSignalData;
+}
 @ObjectType()
-@InputType("SignalInput")
-class Signal {
+class SignalReceived {
+  @Field()
+  userId: string;
   @Field(() => SignalType)
   type: SignalType;
   @Field({ nullable: true })
@@ -139,7 +149,7 @@ export class UserResolver {
     if (/\s/.test(email) || !/\./.test(email) || !/\@/.test(email)) {
       return new RegisterResponse({ error: RegisterResponseError.BAD_EMAIL });
     }
-    if (!rawPassword || rawPassword.length <= 2) {
+    if (!rawPassword) {
       return new RegisterResponse({
         error: RegisterResponseError.BAD_PASSWORD
       });
@@ -193,22 +203,32 @@ export class UserResolver {
 
   /// ################# SIGNALS #################
 
-  @Subscription(() => Signal, {
+  @UseMiddleware(isAuth)
+  @Subscription(() => SignalReceived, {
     topics: ({ context }: { context: RequestContext }) => {
-      return context.payload ? context.payload.id : "a";
+      return context.payload!.id;
     }
   })
-  signals(@Root() signal: Signal): Signal {
+  signals(@Root() signal: SignalReceived): SignalReceived {
     return signal;
   }
 
   @Mutation(() => GenericError, { nullable: true })
+  @UseMiddleware(isAuth)
   async sendSignal(
     @PubSub() pubSub: PubSubEngine,
-    @Arg("signal") signal: Signal
+    @Arg("peerId") peerId: string,
+    @Arg("signal") signal: SignalSent,
+    @Ctx() context: RequestContext
   ): Promise<GenericError | null> {
-    await pubSub.publish("a", signal);
-    return null;
+    const userId = context.payload!.id;
+    try {
+      await pubSub.publish(peerId, { ...signal, userId } as SignalReceived);
+      return null;
+    } catch (e) {
+      console.log(e);
+      return new GenericError(e.message);
+    }
   }
 }
 

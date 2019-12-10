@@ -5,14 +5,14 @@ import { sign, verify, decode } from "jsonwebtoken";
 import { Response } from "express";
 import { BlackListedJWT } from "./entity/BlackListedJWT";
 import { getConnection } from "typeorm";
-
+ 
 const TOKEN_SECRET = process.env.TOKEN_SECRET || "fefessdfc";
 
 export function setJWT(user: User, res: Response) {
   const token = sign({ email: user.email, id: user.id }, TOKEN_SECRET, {
     expiresIn: "7 days"
   });
-  res.cookie("jid", token, {
+  res.cookie("jid", token, { 
     // secure: true,
     httpOnly: true,
     sameSite: "Lax"

@@ -1,8 +1,6 @@
 import {
-  itemBushFromPath,
   DEFAULT_STROKE_COLOR,
   DEFAUTL_PATH_OPTIONS,
-  SavedPath,
   SELECTED_COLOR,
   ExtendedTool,
   RECT_COLOR
@@ -10,8 +8,10 @@ import {
 import { cursors } from "./utils-canvas";
 import { BushItemId, CanvasModel } from "./CanvasModel";
 import { store } from "../services/Store";
+import { PaperPathData } from "../generated/graphql";
 
 export function getAllTools({
+  updatePaths,
   addPath,
   removePath,
   pastePath,
@@ -28,7 +28,7 @@ export function getAllTools({
     const tolerance = 6;
     let prevScale = 1;
 
-    let copiedPaths: paper.Item[] | undefined;
+    let copiedPaths: BushItemId[] | undefined;
     let copiedRect: paper.Path.Rectangle | undefined;
 
     function rectSizeIsValid() {
@@ -44,7 +44,7 @@ export function getAllTools({
         copiedRect.remove();
       }
       if (copiedPaths !== undefined) {
-        copiedPaths.forEach(p => p.remove());
+        copiedPaths.forEach(p => p.path.remove());
       }
       if (!rect) return;
 
@@ -53,12 +53,11 @@ export function getAllTools({
 
       copiedPaths = selectedPaths.map(p => {
         const newPath = p.path.clone();
-        newPath.data.oldId = p.path.id;
         newPath.visible = false;
-        return newPath;
+        return { ...p, path: newPath };
       });
     }
-    function handlePaste(event: ClipboardEvent) {
+    async function handlePaste(event: ClipboardEvent) {
       if (event.clipboardData === null) return;
       const files = event.clipboardData.files;
       const prevTimestamp = store.canvasUploadImage.getAttribute(
@@ -84,20 +83,22 @@ export function getAllTools({
         copiedRect !== undefined &&
         copiedPaths !== undefined
       ) {
-        const { x, y } = rect.internalBounds!;
-        const {
-          x: xPrev,
-          y: yPrev,
-          width,
-          height
-        } = copiedRect.internalBounds!;
-        selectedPaths = copiedPaths.map(p => {
-          p.position!.x = x + p.position.x - xPrev - width / 2;
-          p.position!.y = y + p.position.y - yPrev - height / 2;
-          p.visible = true;
-          pastePath(p);
-          return itemBushFromPath(p);
-        });
+        const { x, y } = rect.internalBounds;
+        const { x: xPrev, y: yPrev, width, height } = copiedRect.internalBounds;
+        const newPaths = await Promise.all(
+          copiedPaths.map(bushItem => {
+            const p = bushItem.path;
+            p.position.x = x + p.position.x - xPrev - width / 2;
+            p.position.y = y + p.position.y - yPrev - height / 2;
+            p.visible = true;
+            return pastePath(bushItem);
+          })
+        );
+
+        selectedPaths = newPaths.reduce<BushItemId[]>((all, p) => {
+          if (p !== null) all.push(p);
+          return all;
+        }, []);
         copiedPaths = undefined;
 
         rect = copiedRect;
@@ -122,13 +123,7 @@ export function getAllTools({
       event.preventDefault();
     }
     function reloadSelectedPaths() {
-      const newPaths: BushItemId[] = [];
-      selectedPaths.forEach(p => {
-        bush.remove(p);
-        newPaths.push(itemBushFromPath(p.path));
-      });
-      bush.load(newPaths);
-      selectedPaths = newPaths;
+      selectedPaths = updatePaths(selectedPaths);
     }
     function drawRect(from: paper.Point, to: paper.Point) {
       rect.remove();
@@ -353,7 +348,7 @@ export function getAllTools({
   /** Drawing tool */
   function getDrawHandlers() {
     let path: paper.Path;
-    let pathSave: SavedPath;
+    let pathSave: PaperPathData;
     function onMouseDown(event: paper.ToolEvent) {
       path = new paper.Path(DEFAUTL_PATH_OPTIONS);
       path.add(event.point);
@@ -372,6 +367,7 @@ export function getAllTools({
     }
     function onMouseUp(event: paper.ToolEvent) {
       if (path.length > 3) {
+        path.simplify(1.5);
         addPath(path, pathSave);
       } else {
         path.remove();

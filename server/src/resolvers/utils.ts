@@ -1,5 +1,10 @@
 import { ObjectType, Field } from "type-graphql";
-import { Paper, PaperRecording, PaperPermissionType, PaperPermission } from "../entity/Paper";
+import {
+  Paper,
+  PaperRecording,
+  PaperPermissionType,
+  PaperPermission
+} from "../entity/Paper";
 import { EntityManager, getManager, Brackets } from "typeorm";
 
 @ObjectType()
@@ -48,7 +53,6 @@ export async function getRecord({
   return { record, paper };
 }
 
-
 export function hasAccessToPaper({
   userId,
   paperId,
@@ -76,8 +80,11 @@ export function hasAccessToPaper({
               new Brackets(qb3 => {
                 let added = false;
                 const _addCond = (perm: PaperPermissionType) => {
-                  const fn = added ? qb3.orWhere : qb3.where;
-                  fn("pp.type = :perm", { perm });
+                  if (added) {
+                    qb3.orWhere("pp.type = :perm", { perm });
+                  } else {
+                    qb3.where("pp.type = :perm", { perm });
+                  }
                   added = true;
                 };
 
