@@ -1,15 +1,15 @@
-import "reflect-metadata";
-import http from "http";
-import express, { Request, Response } from "express";
 import { ApolloServer } from "apollo-server-express";
-import { buildSchema } from "type-graphql";
-import { UserResolver, UserModelResolver } from "./resolvers/userResolvers";
-import { PaperResolver, PaperModelResolver } from "./resolvers/paperResolvers";
-import { createConnection } from "typeorm";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import express, { Request, Response } from "express";
+import http from "http";
+import "reflect-metadata";
+import { buildSchema } from "type-graphql";
+import { createConnection } from "typeorm";
 import { startRemovingBlackListedTokens } from "./auth";
 import { PaperPathResolver } from "./resolvers/paperPathResolver";
+import { PaperModelResolver, PaperResolver } from "./resolvers/paperResolvers";
+import { UserModelResolver, UserResolver } from "./resolvers/userResolvers";
 
 const PORT = process.env.PORT || 4000;
 
