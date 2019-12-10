@@ -3,7 +3,7 @@ import { BrowserRouter, Route } from "react-router-dom";
 import { Main } from "./main/Main";
 import { Auth, AUTH_PATHS } from "./auth/Auth";
 import { NavBar } from "./components/NavBar";
-
+/*Modularización debería ser más clara*/
 const App: React.FC = () => {
   return (
     <BrowserRouter>
